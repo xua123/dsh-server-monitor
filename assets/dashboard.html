@@ -1320,7 +1320,7 @@
     var editBtn = el('button', 'card-edit')
     editBtn.type = 'button'
     var editable = Boolean(entry.manualId)
-    editBtn.title = editable ? '编辑凭据并重连（地址与端口不可调整）' : '自定义服务器名称（IP 地址不可调整）'
+    editBtn.title = editable ? '编辑凭据并重连' : '自定义服务器名称（IP 地址不可调整）'
     editBtn.setAttribute('aria-label', editable ? '编辑凭据' : '自定义服务器名称')
     editBtn.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"></path><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z"></path></svg>'
     editBtn.addEventListener('click', function (event) {
@@ -3093,9 +3093,9 @@
     var form = els.targetForm
     form.elements.name.value = entry.name || ''
     form.elements.host.value = entry.host || ''
-    form.elements.host.disabled = true
+    form.elements.host.disabled = false
     form.elements.port.value = String(entry.port || 22)
-    form.elements.port.disabled = true
+    form.elements.port.disabled = false
     form.elements.username.value = entry.username || ''
     form.elements.auth.value = entry.auth === 'key' ? 'key' : 'password'
     form.elements.password.value = ''
@@ -3109,7 +3109,7 @@
     var label = entry.name || entry.host
     setTargetMsg(
       state.editingTargetId
-        ? '正在编辑 ' + label + '（地址与端口不可调整）'
+        ? '正在编辑 ' + label + '：地址、端口与凭据都可以修改'
         : '为 ' + label + ' 保存手动凭据，保存后自动重连并覆盖 ~/.ssh/config 里的同名主机',
       '',
     )
