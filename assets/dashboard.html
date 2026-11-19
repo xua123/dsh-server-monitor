@@ -171,6 +171,11 @@
     border: 1px solid color-mix(in srgb, var(--danger) 30%, var(--border));
   }
   .banner[hidden] { display: none; }
+  .banner.ok {
+    color: var(--ok);
+    background: color-mix(in srgb, var(--ok) 10%, var(--card));
+    border-color: color-mix(in srgb, var(--ok) 32%, var(--border));
+  }
 
   main { flex: 1; padding: 16px 18px 26px; }
   .grid {
@@ -869,6 +874,7 @@
     data: null,
     error: null,
     busy: false,
+    loading: null,
     lastUpdate: 0,
     history: Object.create(null),
     accelHistory: Object.create(null),
@@ -2886,6 +2892,39 @@
     return wrap
   }
 
+  /** The current snapshot entry for one host/port, or null. */
+  function findRemote(host, port) {
+    var list = (state.data && state.data.remotes) || []
+    var wantedHost = String(host || '').toLowerCase()
+    var wantedPort = Number(port) || 22
+    for (var i = 0; i < list.length; i += 1) {
+      if (String(list[i].host || '').toLowerCase() === wantedHost && (Number(list[i].port) || 22) === wantedPort) return list[i]
+    }
+    return null
+  }
+
+  /** "Ubuntu 22.04 · 32 核" for confirmation messages. */
+  function describeHost(view) {
+    if (!view) return ''
+    return [view.osName, view.cpu && view.cpu.cores ? view.cpu.cores + ' 核' : ''].filter(Boolean).join(' · ')
+  }
+
+  /**
+   * Wait until a host's card leaves the "collecting" state, then hand it to
+   * `done`. A first SSH connect can exceed one poll window, so a card that is
+   * still `connecting` must never be reported as a failure.
+   */
+  function watchRemote(host, port, attempt, done) {
+    var view = findRemote(host, port)
+    if (view !== null && view.status === 'connecting' && attempt < 6) {
+      window.setTimeout(function () {
+        load(true).then(function () { watchRemote(host, port, attempt + 1, done) })
+      }, 1500)
+      return
+    }
+    done(view)
+  }
+
   /** Force one host to be collected again, bypassing any pooled SSH connection. */
   function reconnectHost(entry, button) {
     if (!writeToken) {
@@ -2911,7 +2950,20 @@
         })
         render()
       }
-      load(true)
+      load(true).then(function () {
+        watchRemote(entry.host, entry.port, 0, function (view) {
+          var finalView = view || host
+          if (finalView && finalView.status === 'connecting') {
+            showBanner('重连中，指标稍后会自动刷新…')
+            return
+          }
+          if (finalView && finalView.status === 'online') {
+            showBanner('重连成功：' + (finalView.name || finalView.host) + (describeHost(finalView) ? '（' + describeHost(finalView) + '）' : ''), 'ok')
+            return
+          }
+          showBanner('仍然无法连接：' + ((finalView && finalView.error && finalView.error.message) || '未知原因'))
+        })
+      })
     }).catch(function (error) {
       showBanner('重连失败：' + ((error && error.message) || String(error)))
     }).finally(function () {
@@ -3124,7 +3176,23 @@
       resetTargetEdit()
       setTargetMsg(isEdit ? '已更新，正在重新采集…' : '已添加，正在建立 SSH 连接…', 'ok')
       loadTargetList()
-      load(true)
+      return load(true).then(function () {
+        watchRemote(body.host, body.port, 0, function (view) {
+          if (view === null) {
+            setTargetMsg('已保存，等待下一次采集…', '')
+            return
+          }
+          if (view.status === 'connecting') {
+            setTargetMsg('已保存，连接较慢，指标稍后会自动刷新…', '')
+            return
+          }
+          if (view.status === 'online') {
+            setTargetMsg(['连接成功', describeHost(view)].filter(Boolean).join(' · ') + '，正在采集指标', 'ok')
+            return
+          }
+          setTargetMsg('已保存，但连接失败：' + ((view.error && view.error.message) || '未知原因'), 'error')
+        })
+      })
     }).catch(function (error) {
       setTargetMsg((error && error.message) || String(error), 'error')
     }).finally(function () {
@@ -3132,14 +3200,16 @@
     })
   }
 
-  function showBanner(message) {
+  function showBanner(message, tone) {
     if (!message) {
       els.banner.hidden = true
       els.banner.textContent = ''
+      els.banner.classList.remove('ok')
       return
     }
     els.banner.hidden = false
     els.banner.textContent = message
+    els.banner.classList.toggle('ok', tone === 'ok')
   }
 
   function setBusy(busy) {
@@ -3155,15 +3225,16 @@
     state.timer = window.setTimeout(function () { load(false) }, delay)
   }
 
+  /** Reload the snapshot. Returns a promise so callers can report the outcome. */
   function load(force) {
-    if (state.busy) return
+    if (state.busy) return state.loading || Promise.resolve()
     setBusy(true)
     var url = 'api/snapshot'
     var params = []
     if (force) params.push('force=1')
     if (isWorkspaceScope && !state.wsShowAll && state.wsBoundHost) params.push('host=' + encodeURIComponent(state.wsBoundHost))
     if (params.length > 0) url += '?' + params.join('&')
-    fetch(url, { cache: 'no-store', headers: { accept: 'application/json' } })
+    state.loading = fetch(url, { cache: 'no-store', headers: { accept: 'application/json' } })
       .then(function (response) {
         if (!response.ok) throw new Error('采集服务返回 HTTP ' + response.status)
         return response.json()
@@ -3195,6 +3266,7 @@
           schedule()
         }
       })
+    return state.loading
   }
 
   function tick() {
