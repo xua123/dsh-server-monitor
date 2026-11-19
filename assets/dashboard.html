@@ -931,6 +931,7 @@
     modal: document.getElementById('target-modal'),
     targetClose: document.getElementById('target-close'),
     targetForm: document.getElementById('target-form'),
+    targetTitle: document.getElementById('target-title'),
     targetSubmit: document.getElementById('target-submit'),
     targetTest: document.getElementById('target-test'),
     targetCancelEdit: document.getElementById('target-cancel-edit'),
@@ -1311,7 +1312,7 @@
     editBtn.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"></path><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z"></path></svg>'
     editBtn.addEventListener('click', function (event) {
       event.stopPropagation()
-      if (editable) editManualTarget(entry)
+      if (editable) editTargetCredentials(entry)
       else openAliasModal(entry)
     })
     actionsWrap.appendChild(editBtn)
@@ -2870,13 +2871,15 @@
       reconnectHost(entry, retry)
     })
     wrap.appendChild(retry)
-    if (entry.manualId) {
-      var fix = el('button', 'error-edit-btn', '编辑凭据')
+    if (entry.kind !== 'local') {
+      var fix = el('button', 'error-edit-btn', entry.manualId ? '编辑凭据' : '设置凭据')
       fix.type = 'button'
-      fix.title = '修改用户名、密码或私钥后自动重连'
+      fix.title = entry.manualId
+        ? '修改用户名、密码或私钥后自动重连'
+        : '输入密码或私钥：保存后作为这台主机的手动凭据（覆盖 ~/.ssh/config）并自动重连'
       fix.addEventListener('click', function (event) {
         event.stopPropagation()
-        editManualTarget(entry)
+        editTargetCredentials(entry)
       })
       wrap.appendChild(fix)
     }
@@ -2917,9 +2920,15 @@
     })
   }
 
-  /** Open the target dialog on an existing manual server so credentials can be fixed. */
-  function editManualTarget(entry) {
+  /** Open the credential dialog for any server card (manual target or ssh-config host). */
+  function editTargetCredentials(entry) {
     openTargets()
+    if (!entry.manualId) {
+      // Discovered from ~/.ssh/config: the address stays, the credentials become
+      // a manual target that wins over the config entry for the same host:port.
+      startEditTarget(entry, null)
+      return
+    }
     setTargetMsg('正在读取服务器设置…', '')
     fetch('api/targets', { cache: 'no-store', headers: { accept: 'application/json' } })
       .then(function (response) {
@@ -2980,8 +2989,15 @@
     })
   }
 
-  function startEditTarget(entry) {
-    state.editingTargetId = entry.id
+  /**
+   * Prefill the target dialog for an existing server.
+   *
+   * `manualId` is the record to update. Pass `null` to store a *new* manual
+   * credential set for an ssh-config host: the same address wins over the
+   * discovered entry, so the next collection uses the credentials just entered.
+   */
+  function startEditTarget(entry, manualId) {
+    state.editingTargetId = manualId === undefined ? (entry.id || null) : manualId
     var form = els.targetForm
     form.elements.name.value = entry.name || ''
     form.elements.host.value = entry.host || ''
@@ -2991,13 +3007,20 @@
     form.elements.username.value = entry.username || ''
     form.elements.auth.value = entry.auth === 'key' ? 'key' : 'password'
     form.elements.password.value = ''
-    form.elements.password.placeholder = '留空则保持原密码不变'
+    form.elements.password.placeholder = state.editingTargetId ? '留空则保持原密码不变' : 'SSH 登录密码'
     form.elements.privateKey.value = ''
     form.elements.passphrase.value = ''
     syncAuthFields()
-    els.targetSubmit.textContent = '更新凭证'
+    els.targetTitle.textContent = state.editingTargetId ? '编辑服务器凭据' : '设置服务器凭据'
+    els.targetSubmit.textContent = state.editingTargetId ? '更新凭证' : '保存凭据'
     els.targetCancelEdit.hidden = false
-    setTargetMsg('正在编辑 ' + (entry.name || entry.host) + '（地址与端口不可调整）', '')
+    var label = entry.name || entry.host
+    setTargetMsg(
+      state.editingTargetId
+        ? '正在编辑 ' + label + '（地址与端口不可调整）'
+        : '为 ' + label + ' 保存手动凭据，保存后自动重连并覆盖 ~/.ssh/config 里的同名主机',
+      '',
+    )
   }
 
   function resetTargetEdit() {
@@ -3009,6 +3032,7 @@
     form.elements.port.value = '22'
     form.elements.password.placeholder = 'SSH 登录密码'
     syncAuthFields()
+    els.targetTitle.textContent = '添加服务器'
     els.targetSubmit.textContent = '保存并开始采集'
     els.targetCancelEdit.hidden = true
     setTargetMsg('', '')
