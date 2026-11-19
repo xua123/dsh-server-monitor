@@ -195,6 +195,10 @@
   .card.offline::before { background: linear-gradient(90deg, var(--danger), color-mix(in srgb, var(--danger) 35%, transparent) 65%, transparent); }
   .card.connecting::before { background: linear-gradient(90deg, var(--warn), color-mix(in srgb, var(--warn) 30%, transparent) 65%, transparent); }
   .card.critical { border-color: color-mix(in srgb, var(--danger) 45%, var(--border)); }
+  /* A host we could not reach is deliberately monochrome; colour comes back on
+     hover/focus so the reconnect and edit actions stay discoverable. */
+  .card.offline { filter: grayscale(1); opacity: .78; }
+  .card.offline:hover, .card.offline:focus-within { filter: none; opacity: 1; }
 
   .card-head { display: flex; align-items: flex-start; gap: 9px; min-width: 0; }
   .dot { width: 8px; height: 8px; border-radius: 50%; margin-top: 6px; flex: none; background: var(--ok); box-shadow: 0 0 0 3px color-mix(in srgb, var(--ok) 18%, transparent); }
@@ -241,7 +245,20 @@
     color: var(--danger); background: color-mix(in srgb, var(--danger) 9%, var(--card));
     border: 1px solid color-mix(in srgb, var(--danger) 24%, var(--border));
     overflow-wrap: anywhere;
+    display: flex; flex-wrap: wrap; align-items: flex-end; gap: 6px 8px;
   }
+  .error-msg { flex: 1 1 100%; min-width: 0; }
+  .error-actions { display: flex; flex-wrap: wrap; gap: 6px; }
+  .error-retry, .error-edit-btn {
+    font: inherit; font-size: 10.5px; line-height: 1; padding: 5px 9px; border-radius: 6px;
+    border: 1px solid color-mix(in srgb, var(--danger) 32%, var(--border));
+    background: color-mix(in srgb, var(--danger) 8%, var(--card)); color: var(--danger);
+    cursor: pointer; transition: background .15s ease, border-color .15s ease;
+  }
+  .error-retry:hover { background: color-mix(in srgb, var(--danger) 17%, var(--card)); border-color: color-mix(in srgb, var(--danger) 52%, var(--border)); }
+  .error-retry[disabled] { opacity: .6; cursor: default; }
+  .error-edit-btn { color: var(--text-2); border-color: var(--border); background: var(--card-soft); }
+  .error-edit-btn:hover { color: var(--text); border-color: color-mix(in srgb, var(--accent) 35%, var(--border)); background: color-mix(in srgb, var(--accent) 8%, var(--card)); }
   .error-box .stale-note { display: block; color: var(--muted); margin-top: 2px; }
   .collecting {
     margin-top: 12px; padding: 14px 10px; border-radius: 9px; text-align: center;
@@ -1288,12 +1305,14 @@
     actionsWrap.appendChild(monitorButton(entry))
     var editBtn = el('button', 'card-edit')
     editBtn.type = 'button'
-    editBtn.title = '自定义服务器名称（IP 地址不可调整）'
-    editBtn.setAttribute('aria-label', '自定义服务器名称')
+    var editable = Boolean(entry.manualId)
+    editBtn.title = editable ? '编辑凭据并重连（地址与端口不可调整）' : '自定义服务器名称（IP 地址不可调整）'
+    editBtn.setAttribute('aria-label', editable ? '编辑凭据' : '自定义服务器名称')
     editBtn.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"></path><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z"></path></svg>'
     editBtn.addEventListener('click', function (event) {
       event.stopPropagation()
-      openAliasModal(entry)
+      if (editable) editManualTarget(entry)
+      else openAliasModal(entry)
     })
     actionsWrap.appendChild(editBtn)
     if (entry.kind !== 'local') {
@@ -1317,11 +1336,13 @@
       node.appendChild(waiting)
     } else if (offline) {
       var box = el('div', 'error-box')
-      var message = (entry.error && entry.error.message) || '离线'
-      box.appendChild(document.createTextNode(message))
+      var message = el('div', 'error-msg')
+      message.appendChild(document.createTextNode((entry.error && entry.error.message) || '离线'))
       if (entry.stale && entry.lastSuccessAt) {
-        box.appendChild(el('span', 'stale-note', '显示的是 ' + fmtRelative(entry.lastSuccessAt) + '的最后一次数据'))
+        message.appendChild(el('span', 'stale-note', '显示的是 ' + fmtRelative(entry.lastSuccessAt) + '的最后一次数据'))
       }
+      box.appendChild(message)
+      box.appendChild(errorActions(entry))
       node.appendChild(box)
     } else {
       var cpu = entry.cpu || {}
@@ -2832,6 +2853,91 @@
       els.scopeMsg.textContent = (error && error.message) || String(error)
       els.scopeMsg.className = 'form-msg error'
     })
+  }
+
+  /** Actions shown inside an offline card: retry the connection, fix credentials. */
+  function errorActions(entry) {
+    var wrap = el('div', 'error-actions')
+    var retry = el('button', 'error-retry', '重连')
+    retry.type = 'button'
+    retry.title = '断开旧连接并立即重新采集这台服务器'
+    retry.addEventListener('click', function (event) {
+      event.stopPropagation()
+      reconnectHost(entry, retry)
+    })
+    wrap.appendChild(retry)
+    if (entry.manualId) {
+      var fix = el('button', 'error-edit-btn', '编辑凭据')
+      fix.type = 'button'
+      fix.title = '修改用户名、密码或私钥后自动重连'
+      fix.addEventListener('click', function (event) {
+        event.stopPropagation()
+        editManualTarget(entry)
+      })
+      wrap.appendChild(fix)
+    }
+    return wrap
+  }
+
+  /** Force one host to be collected again, bypassing any pooled SSH connection. */
+  function reconnectHost(entry, button) {
+    if (!writeToken) {
+      showBanner('页面令牌缺失，请刷新页面后重试')
+      return
+    }
+    var label = button.textContent
+    button.disabled = true
+    button.textContent = '重连中…'
+    fetch('api/hosts/' + encodeURIComponent(entry.id) + '/reconnect', {
+      method: 'POST',
+      headers: { 'x-monitor-token': writeToken },
+    }).then(function (response) {
+      return response.json().then(function (body) { return { response: response, body: body } })
+    }).then(function (result) {
+      if (!result.response.ok || !result.body.ok) throw new Error(result.body.error || '重连失败')
+      // Paint the fresh view right away: a failed retry still needs no banner,
+      // because the card itself carries the real SSH error message.
+      var host = result.body.host
+      if (state.data && host && host.id) {
+        state.data.remotes = (state.data.remotes || []).map(function (item) {
+          return item.id === host.id ? host : item
+        })
+        render()
+      }
+      load(true)
+    }).catch(function (error) {
+      showBanner('重连失败：' + ((error && error.message) || String(error)))
+    }).finally(function () {
+      button.disabled = false
+      button.textContent = label
+    })
+  }
+
+  /** Open the target dialog on an existing manual server so credentials can be fixed. */
+  function editManualTarget(entry) {
+    openTargets()
+    setTargetMsg('正在读取服务器设置…', '')
+    fetch('api/targets', { cache: 'no-store', headers: { accept: 'application/json' } })
+      .then(function (response) {
+        if (!response.ok) throw new Error('读取服务器列表失败')
+        return response.json()
+      })
+      .then(function (payload) {
+        var record = (payload.targets || []).filter(function (target) {
+          return target.id === entry.manualId
+        })[0]
+        startEditTarget(record || {
+          id: entry.manualId,
+          name: entry.name,
+          host: entry.host,
+          port: entry.port,
+          username: entry.username,
+          auth: 'password',
+        })
+      })
+      .catch(function (error) {
+        setTargetMsg((error && error.message) || String(error), 'error')
+      })
   }
 
   /** Card trash button: manual targets are deleted, discovered ones are hidden. */
