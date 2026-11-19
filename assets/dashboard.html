@@ -566,11 +566,22 @@
   button.btn.docker-action-btn { padding: 1px 8px; height: 22px; font-size: 10.5px; line-height: 18px; border-radius: 6px; }
   .docker-sub { margin-top: 4px; font-size: 10.5px; color: var(--muted); word-break: break-all; line-height: 1.5; }
   .docker-meta { margin-top: 7px; display: flex; gap: 6px 14px; flex-wrap: wrap; font-size: 10.5px; color: var(--text-2); }
-  .proc-action-btn { padding: 1px 8px; height: 22px; font-size: 11px; line-height: 18px; border-radius: 6px; }
-  .btn.proc-action-btn { background: transparent; border: 1px solid var(--border); color: var(--text-2); }
-  .btn.proc-action-btn.warn { color: var(--warn); border-color: color-mix(in srgb, var(--warn) 45%, var(--border)); background: transparent; }
-  .btn.proc-action-btn.info { color: var(--accent); border-color: color-mix(in srgb, var(--accent) 45%, var(--border)); background: transparent; }
-  .btn.proc-action-btn:hover { background: var(--bg-soft); }
+  .proc-actions { display: inline-flex; align-items: center; justify-content: flex-end; gap: 2px; }
+  /* Row actions are quiet ghost pills: a border on every row read as clutter,
+     so the outline and fill only appear on hover. */
+  .proc-action-btn {
+    display: inline-flex; align-items: center; gap: 4px;
+    height: 24px; padding: 0 8px; border-radius: 7px;
+    border: 1px solid transparent; background: transparent;
+    color: var(--text-2); font-size: 10.5px; font-weight: 600; line-height: 1;
+    cursor: pointer; transition: color .15s ease, background .15s ease, border-color .15s ease;
+  }
+  .proc-action-btn svg { width: 12px; height: 12px; display: block; }
+  .proc-table tr:hover .proc-action-btn { background: var(--card-soft); border-color: var(--border); color: var(--text); }
+  .proc-action-btn.locate:hover { color: var(--accent); background: color-mix(in srgb, var(--accent) 10%, transparent); border-color: color-mix(in srgb, var(--accent) 34%, var(--border)); }
+  .proc-action-btn.stop:hover { color: var(--danger); background: color-mix(in srgb, var(--danger) 10%, transparent); border-color: color-mix(in srgb, var(--danger) 34%, var(--border)); }
+  .proc-action-btn:focus-visible { outline: 2px solid color-mix(in srgb, var(--accent) 45%, transparent); outline-offset: 1px; }
+  .proc-table th:last-child, .proc-table td:last-child { text-align: right; white-space: nowrap; }
   .docker-container-cell { max-width: 180px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 11px; color: var(--text-2); }
   .docker-detail-btn { min-width: 42px; }
   .docker-detail { margin-top: 9px; padding-top: 8px; border-top: 1px dashed var(--border); display: grid; gap: 5px; }
@@ -1924,6 +1935,25 @@
     return wrap
   }
 
+  var PROC_ICONS = {
+    locate: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="6.4"></circle><path d="M12 2.6v2.8M12 18.6v2.8M2.6 12h2.8M18.6 12h2.8"></path><circle cx="12" cy="12" r="1.5" fill="currentColor" stroke="none"></circle></svg>',
+    stop: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3.2v8.4"></path><path d="M7.3 6.1a7.6 7.6 0 1 0 9.4 0"></path></svg>',
+  }
+
+  /** Compact ghost pill for a table row action; the tooltip carries the detail. */
+  function procActionButton(kind, label, title, onClick) {
+    var button = el('button', 'proc-action-btn ' + kind)
+    button.type = 'button'
+    button.title = title
+    button.setAttribute('aria-label', title)
+    button.innerHTML = (PROC_ICONS[kind] || PROC_ICONS.stop) + '<span>' + label + '</span>'
+    button.addEventListener('click', function (event) {
+      event.stopPropagation()
+      onClick()
+    })
+    return button
+  }
+
   function renderTopProcesses(data) {
     var procs = (data && data.processes) || []
     var toolbar = el('div', 'proc-toolbar')
@@ -2014,15 +2044,12 @@
       var cmdTd = el('td', 'cmd-cell mono', p.command)
       cmdTd.title = p.command
       tr.appendChild(cmdTd)
-      var actionTd = document.createElement('td')
-      var abortBtn = el('button', 'btn warn proc-action-btn', '中止')
-      abortBtn.type = 'button'
-      abortBtn.title = '中止进程 ' + p.pid
-      abortBtn.addEventListener('click', function (event) {
-        event.stopPropagation()
+      var actionTd = el('td', 'proc-action-cell')
+      var actions = el('div', 'proc-actions')
+      actions.appendChild(procActionButton('stop', '中止', '中止进程 ' + p.pid, function () {
         openKillModal(p)
-      })
-      actionTd.appendChild(abortBtn)
+      }))
+      actionTd.appendChild(actions)
       tr.appendChild(actionTd)
       tbody.appendChild(tr)
     })
@@ -2104,26 +2131,18 @@
       var containerTd = el('td', 'docker-container-cell', p.containerName || '宿主机进程')
       if (p.containerName) containerTd.title = p.containerStatus || p.containerName
       tr.appendChild(containerTd)
-      var actionTd = document.createElement('td')
+      var actionTd = el('td', 'proc-action-cell')
+      var actions = el('div', 'proc-actions')
       if (p.containerName) {
-        var locateBtn = el('button', 'btn info proc-action-btn', '定位')
-        locateBtn.type = 'button'
-        locateBtn.title = '定位容器 ' + p.containerName
-        locateBtn.addEventListener('click', function (event) {
-          event.stopPropagation()
+        actions.appendChild(procActionButton('locate', '定位', '在 Docker 列表里定位容器 ' + p.containerName, function () {
           focusDockerFromProcess(p.containerId)
-        })
-        actionTd.appendChild(locateBtn)
+        }))
       } else {
-        var killBtn = el('button', 'btn warn proc-action-btn', '停止')
-        killBtn.type = 'button'
-        killBtn.title = '停止进程 ' + p.pid
-        killBtn.addEventListener('click', function (event) {
-          event.stopPropagation()
+        actions.appendChild(procActionButton('stop', '停止', '停止进程 ' + p.pid, function () {
           openKillModal(p)
-        })
-        actionTd.appendChild(killBtn)
+        }))
       }
+      actionTd.appendChild(actions)
       tr.appendChild(actionTd)
       tbody.appendChild(tr)
     })
