@@ -284,6 +284,12 @@
   .skeleton { pointer-events: none; }
   .sk-line { height: 11px; border-radius: 6px; background: linear-gradient(90deg, var(--track), color-mix(in srgb, var(--track) 55%, var(--card)), var(--track)); background-size: 200% 100%; animation: shimmer 1.3s ease-in-out infinite; margin-bottom: 9px; }
   @keyframes shimmer { 0% { background-position: 200% 0; } 100% { background-position: -200% 0; } }
+  @keyframes card-flash {
+    0% { box-shadow: 0 0 0 0 color-mix(in srgb, var(--accent) 55%, transparent); }
+    70% { box-shadow: 0 0 0 5px color-mix(in srgb, var(--accent) 0%, transparent); }
+    100% { box-shadow: var(--shadow); }
+  }
+  .card.flash { animation: card-flash 1.3s ease-out 2; }
 
   footer.foot { padding: 0 18px 18px; color: var(--muted); font-size: 10.5px; }
   footer.foot code { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: 10px; }
@@ -1260,6 +1266,7 @@
     var hotAcc = !offline && !connecting && (entry.gpus || []).some(isHotCard)
     var critical = !offline && !connecting && (hotAcc || Number(entry.disk && entry.disk.percent) >= 92 || Number(entry.memory && entry.memory.percent) >= 92)
     var node = el('article', 'card' + (offline ? ' offline' : '') + (connecting ? ' connecting' : '') + (entry.kind === 'local' ? ' local' : '') + (critical ? ' critical' : '') + (paused ? ' paused' : '') + (!offline && !connecting && !paused ? ' clickable' : ''))
+    node.setAttribute('data-host-id', entry.id || '')
     if (!offline && !connecting && !paused) {
       node.title = '点击查看占用详情'
       node.addEventListener('click', function () {
@@ -2925,6 +2932,39 @@
     done(view)
   }
 
+  /** Scroll to a card and flash it so a just-saved server is easy to spot. */
+  function focusCard(hostId) {
+    if (!hostId) return
+    var node = document.querySelector('[data-host-id="' + String(hostId).replace(/"/g, '\\"') + '"]')
+    if (node === null) return
+    try {
+      // 'nearest' keeps the success banner in view: it only scrolls when the
+      // card is actually off-screen.
+      node.scrollIntoView({ behavior: 'smooth', block: 'nearest' })
+    } catch (error) {
+      node.scrollIntoView()
+    }
+    node.classList.add('flash')
+    window.setTimeout(function () { node.classList.remove('flash') }, 2800)
+  }
+
+  /**
+   * Leave the dialog after a successful save: the user asked for the board, not
+   * a confirmation stuck inside a modal, so the outcome moves to the banner.
+   */
+  function finishSave(view, cardId) {
+    var pending = Boolean(view && view.status === 'connecting')
+    var name = (view && (view.name || view.host)) || ''
+    closeTargets()
+    if (pending) {
+      showBanner('已保存：' + name + '，正在连接并采集指标…', 'ok')
+    } else {
+      var detail = describeHost(view)
+      showBanner('连接成功：' + name + (detail ? '（' + detail + '）' : '') + '，正在采集指标', 'ok')
+    }
+    focusCard(cardId)
+  }
+
   /** Force one host to be collected again, bypassing any pooled SSH connection. */
   function reconnectHost(entry, button) {
     if (!writeToken) {
@@ -3173,8 +3213,13 @@
       return response.json().then(function (payload) { return { response: response, payload: payload } })
     }).then(function (result) {
       if (!result.response.ok || !result.payload.ok) throw new Error(result.payload.error || '保存失败')
+      var savedId = result.payload.target && result.payload.target.id ? 'manual:' + result.payload.target.id : ''
       resetTargetEdit()
       setTargetMsg(isEdit ? '已更新，正在重新采集…' : '已添加，正在建立 SSH 连接…', 'ok')
+      // A freshly added server must be visible even when the page is scoped to
+      // the current workspace, otherwise the dialog would close onto a filtered
+      // board and the new card would seem to have vanished.
+      if (!isEdit && isWorkspaceScope && !state.wsShowAll) state.wsShowAll = true
       loadTargetList()
       return load(true).then(function () {
         watchRemote(body.host, body.port, 0, function (view) {
@@ -3183,11 +3228,11 @@
             return
           }
           if (view.status === 'connecting') {
-            setTargetMsg('已保存，连接较慢，指标稍后会自动刷新…', '')
+            finishSave(view, savedId)
             return
           }
           if (view.status === 'online') {
-            setTargetMsg(['连接成功', describeHost(view)].filter(Boolean).join(' · ') + '，正在采集指标', 'ok')
+            finishSave(view, savedId)
             return
           }
           setTargetMsg('已保存，但连接失败：' + ((view.error && view.error.message) || '未知原因'), 'error')
