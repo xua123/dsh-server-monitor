@@ -554,6 +554,18 @@
   .docker-left { display: flex; align-items: center; gap: 8px; flex: 1; min-width: 0; }
   .docker-left input[type="checkbox"] { flex: none; accent-color: var(--accent); }
   .docker-batch-bar { display: flex; align-items: center; gap: 8px; margin: 6px 0 10px; padding: 8px 10px; border: 1px solid var(--border); border-radius: 8px; background: var(--card-soft); font-size: 11px; color: var(--text-2); }
+  .batch-progress { height: 6px; border-radius: 99px; background: var(--track); overflow: hidden; margin: 2px 0 6px; }
+  .batch-progress > i { display: block; height: 100%; width: 0; border-radius: 99px; background: linear-gradient(90deg, var(--accent), var(--accent-2)); transition: width .25s ease; }
+  .batch-count { font-size: 11px; color: var(--muted); margin-bottom: 8px; font-variant-numeric: tabular-nums; }
+  .batch-list { max-height: min(44vh, 300px); overflow: auto; border: 1px solid var(--border); border-radius: 9px; background: var(--card-soft); }
+  .batch-row { display: flex; align-items: baseline; gap: 10px; padding: 7px 10px; font-size: 11.5px; border-bottom: 1px solid var(--border); }
+  .batch-row:last-child { border-bottom: 0; }
+  .batch-row .bname { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-variant-numeric: tabular-nums; }
+  .batch-row .bstate { flex: none; max-width: 52%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 10.5px; color: var(--muted); }
+  .batch-row.running .bstate { color: var(--warn); }
+  .batch-row.done .bstate { color: var(--ok); }
+  .batch-row.failed .bstate { color: var(--danger); }
+  .batch-row.failed .bname { color: color-mix(in srgb, var(--danger) 65%, var(--text)); }
   .docker-tree-toggle { margin-top: 7px; padding: 0; border: 0; background: transparent; color: var(--accent); font: inherit; font-size: 10.5px; cursor: pointer; }
   .docker-tree { margin-top: 4px; display: grid; gap: 2px; }
   .docker-tree-item { text-align: left; border: 0; background: transparent; color: var(--text-2); font: inherit; font-size: 10.5px; padding: 2px 4px; border-radius: 5px; cursor: pointer; }
@@ -827,6 +839,25 @@
     </div>
   </div>
 
+  <div class="modal" id="batch-modal" hidden>
+    <div class="modal-panel" style="width:min(560px,100%)" role="dialog" aria-modal="true" aria-labelledby="batch-title">
+      <div class="modal-head">
+        <h2 id="batch-title">批量删除</h2>
+        <button class="icon-btn" id="batch-close" type="button" aria-label="关闭">×</button>
+      </div>
+      <div class="modal-body">
+        <p id="batch-text" style="margin:0 0 10px;line-height:1.6"></p>
+        <div class="batch-progress"><i id="batch-progress-bar"></i></div>
+        <div class="batch-count" id="batch-count"></div>
+        <div class="batch-list" id="batch-list"></div>
+        <div class="actions">
+          <button class="btn" id="batch-cancel" type="button">取消</button>
+          <button class="btn primary" id="batch-confirm" type="button">开始删除</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
   <div class="modal" id="kill-modal" hidden>
     <div class="modal-panel" style="width:min(480px,100%)" role="dialog" aria-modal="true" aria-labelledby="kill-title">
       <div class="modal-head">
@@ -918,6 +949,7 @@
     dockerSelected: { images: new Set(), containers: new Set() },
     dockerFocusId: null,
     dockerBatch: null,
+    batch: null,
     drawerTab: 'top',
     drawerData: null,
     drawerError: null,
@@ -983,6 +1015,15 @@
     dockerConfirm: document.getElementById('docker-confirm'),
     dockerCancel: document.getElementById('docker-cancel'),
     dockerClose: document.getElementById('docker-close'),
+    batchModal: document.getElementById('batch-modal'),
+    batchTitle: document.getElementById('batch-title'),
+    batchText: document.getElementById('batch-text'),
+    batchCount: document.getElementById('batch-count'),
+    batchList: document.getElementById('batch-list'),
+    batchProgressBar: document.getElementById('batch-progress-bar'),
+    batchConfirm: document.getElementById('batch-confirm'),
+    batchCancel: document.getElementById('batch-cancel'),
+    batchClose: document.getElementById('batch-close'),
     aliasClose: document.getElementById('alias-close'),
     aliasForm: document.getElementById('alias-form'),
     aliasMsg: document.getElementById('alias-msg'),
@@ -2339,30 +2380,153 @@
     if (label) label.textContent = '已选 ' + total + ' 个'
   }
 
-  function dockerBatchDelete(kind) {
+  function closeBatchModal() {
+    state.batch = null
+    els.batchModal.hidden = true
+  }
+
+  /** Open the batch dialog with the selected rows listed before anything runs. */
+  function openBatchDelete(kind) {
     var selected = [...state.dockerSelected[kind]]
     if (selected.length === 0) return
-    var label = kind === 'images' ? '镜像' : '容器'
-    if (!window.confirm('确认批量删除 ' + selected.length + ' 个' + label + '？此操作不可恢复。')) return
-    fetch('api/hosts/' + encodeURIComponent(state.drawerHostId) + '/docker/batch', {
-      method: 'POST',
-      headers: { 'content-type': 'application/json', 'x-monitor-token': writeToken },
-      body: JSON.stringify({ kind: kind === 'images' ? 'image' : 'container', action: kind === 'images' ? 'rmi' : 'rm', targets: selected }),
+    var docker = (state.drawerData && state.drawerData.docker) || {}
+    var source = kind === 'images'
+      ? (docker.images || [])
+      : [].concat(docker.running || [], docker.stopped || [])
+    var items = selected.map(function (id) {
+      var item = source.find(function (entry) { return entry.id === id })
+      return {
+        id: id,
+        label: kind === 'images'
+          ? dockerImageRef(item || {})
+          : ((item && (item.name || item.shortId)) || id),
+        status: 'pending',
+        error: '',
+      }
     })
-      .then(function (response) { return response.json() })
-      .then(function (body) {
-        var failures = (body.results || []).filter(function (item) { return !item.ok })
-        if (failures.length) {
-          var text = failures.map(function (item) {
-            var names = (item.blockingContainers || []).map(function (c) { return c.name }).join('、')
-            return item.target + '：' + item.error + (names ? '（容器：' + names + '）' : '')
-          }).join('\n')
-          window.alert('部分删除失败：\n' + text)
+    state.batch = { kind: kind, items: items, running: false, finished: false, stopRequested: false }
+    els.batchTitle.textContent = kind === 'images' ? '批量删除镜像' : '批量删除容器'
+    els.batchText.textContent = '将按顺序删除以下 ' + items.length + ' 个' + (kind === 'images' ? '镜像' : '容器') + '，删除后不可恢复。'
+    els.batchConfirm.textContent = '开始删除'
+    els.batchConfirm.disabled = false
+    els.batchCancel.hidden = false
+    els.batchCancel.disabled = false
+    els.batchCancel.textContent = '取消'
+    renderBatchModal()
+    els.batchModal.hidden = false
+  }
+
+  function batchStatusText(item) {
+    if (item.status === 'running') return '删除中…'
+    if (item.status === 'done') return '已删除'
+    if (item.status === 'failed') return '失败：' + (item.error || '未知原因')
+    return '等待中'
+  }
+
+  function renderBatchModal() {
+    var batch = state.batch
+    if (!batch) return
+    var done = batch.items.filter(function (item) { return item.status === 'done' || item.status === 'failed' }).length
+    var okCount = batch.items.filter(function (item) { return item.status === 'done' }).length
+    els.batchProgressBar.style.width = (batch.items.length ? Math.round((done / batch.items.length) * 100) : 0) + '%'
+    if (batch.running) {
+      els.batchCount.textContent = done + ' / ' + batch.items.length + ' · 正在删除…'
+    } else if (batch.finished) {
+      if (batch.tokenStale) {
+        els.batchCount.textContent = '已停止：页面令牌过期，请刷新面板后重试'
+      } else {
+        var failed = batch.items.length - okCount
+        els.batchCount.textContent = '完成：' + okCount + ' 成功' + (failed > 0 ? '，' + failed + ' 失败' : '') + '（共 ' + batch.items.length + ' 个）'
+      }
+    } else {
+      els.batchCount.textContent = '共 ' + batch.items.length + ' 个，尚未开始'
+    }
+    els.batchList.textContent = ''
+    batch.items.forEach(function (item) {
+      var row = el('div', 'batch-row ' + item.status)
+      var name = el('span', 'bname', item.label)
+      name.title = item.label
+      row.appendChild(name)
+      var stateCell = el('span', 'bstate', batchStatusText(item))
+      stateCell.title = stateCell.textContent
+      row.appendChild(stateCell)
+      els.batchList.appendChild(row)
+    })
+  }
+
+  /** Delete the selected rows one at a time so each result is visible. */
+  function startBatchDelete() {
+    var batch = state.batch
+    if (!batch || batch.running || batch.finished) return
+    var hostId = state.drawerHostId
+    if (!hostId) return
+    if (!writeToken) {
+      els.batchText.textContent = '页面令牌缺失，请刷新面板后重试。'
+      return
+    }
+    batch.running = true
+    batch.stopRequested = false
+    els.batchConfirm.disabled = true
+    els.batchCancel.textContent = '停止'
+    renderBatchModal()
+
+    var kind = batch.kind
+    var action = kind === 'images' ? 'rmi' : 'rm'
+    var payloadKind = kind === 'images' ? 'image' : 'container'
+
+    var step = function (index) {
+      if (batch !== state.batch) return Promise.resolve()
+      if (batch.stopRequested || index >= batch.items.length) return Promise.resolve()
+      var item = batch.items[index]
+      if (item.status !== 'pending') return step(index + 1)
+      item.status = 'running'
+      renderBatchModal()
+      return fetch('api/hosts/' + encodeURIComponent(hostId) + '/docker', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json', 'x-monitor-token': writeToken },
+        body: JSON.stringify({ action: action, kind: payloadKind, target: item.id }),
+      }).then(function (response) {
+        // A page opened before a plugin hot-reload carries the previous write
+        // token; report that clearly instead of failing every row the same way.
+        if (response.status === 403) {
+          throw Object.assign(new Error('页面令牌已过期，请刷新面板后重试'), { staleToken: true })
         }
-        state.dockerSelected[kind] = new Set()
-        loadDrawerDetails(true)
+        return response.json().catch(function () { return {} }).then(function (body) {
+          if (!response.ok || !body || body.ok !== true) {
+            var message = (body && body.error) || ('HTTP ' + response.status)
+            var blockers = (body && body.blockingContainers) || []
+            if (blockers.length) message += '（仍在使用：' + blockers.map(function (entry) { return entry.name }).join('、') + '）'
+            throw new Error(message)
+          }
+        })
+      }).then(function () {
+        item.status = 'done'
+      }, function (error) {
+        item.status = 'failed'
+        item.error = (error && error.message) || String(error)
+        if (error && error.staleToken) {
+          batch.tokenStale = true
+          batch.stopRequested = true
+          els.batchText.textContent = '页面令牌已过期（插件热更新会更换令牌），请刷新面板后重试。'
+        }
+      }).then(function () {
+        renderBatchModal()
+        return step(index + 1)
       })
-      .catch(function (error) { window.alert('批量删除失败：' + (error.message || error)) })
+    }
+
+    step(0).then(function () {
+      if (batch !== state.batch) return
+      batch.running = false
+      batch.finished = true
+      state.dockerSelected[kind] = new Set()
+      updateDockerBatchBar()
+      els.batchCancel.hidden = true
+      els.batchConfirm.textContent = '关闭'
+      els.batchConfirm.disabled = false
+      renderBatchModal()
+      loadDrawerDetails(true)
+    })
   }
 
   function focusDockerFromProcess(id) {
@@ -2403,10 +2567,10 @@
     bar.appendChild(el('span', '', '已选 0 个')).setAttribute('data-count', '')
     var batchImages = el('button', 'btn danger docker-action-btn', '批量删除镜像')
     batchImages.type = 'button'
-    batchImages.addEventListener('click', function () { dockerBatchDelete('images') })
+    batchImages.addEventListener('click', function () { openBatchDelete('images') })
     var batchContainers = el('button', 'btn danger docker-action-btn', '批量删除容器')
     batchContainers.type = 'button'
-    batchContainers.addEventListener('click', function () { dockerBatchDelete('containers') })
+    batchContainers.addEventListener('click', function () { openBatchDelete('containers') })
     bar.appendChild(batchImages)
     bar.appendChild(batchContainers)
     els.drawerBody.appendChild(bar)
@@ -3544,6 +3708,33 @@
   els.dockerClose.addEventListener('click', closeDockerModal)
   els.dockerModal.addEventListener('click', function (event) {
     if (event.target === els.dockerModal) closeDockerModal()
+  })
+
+  els.batchConfirm.addEventListener('click', function () {
+    var batch = state.batch
+    if (!batch) return
+    if (batch.finished) {
+      closeBatchModal()
+      return
+    }
+    startBatchDelete()
+  })
+  els.batchCancel.addEventListener('click', function () {
+    var batch = state.batch
+    if (batch && batch.running) {
+      batch.stopRequested = true
+      els.batchCancel.disabled = true
+      els.batchCancel.textContent = '正在停止…'
+      return
+    }
+    closeBatchModal()
+  })
+  els.batchClose.addEventListener('click', function () {
+    if (state.batch && state.batch.running) return
+    closeBatchModal()
+  })
+  els.batchModal.addEventListener('click', function (event) {
+    if (event.target === els.batchModal && !(state.batch && state.batch.running)) closeBatchModal()
   })
 
   function openKillModal(process) {
