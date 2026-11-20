@@ -350,13 +350,6 @@
   }
   .target-row .danger:hover { background: color-mix(in srgb, var(--danger) 12%, transparent); }
   .target-empty { padding: 10px 2px; font-size: 11px; color: var(--muted); }
-  .scope-modes { display: flex; flex-wrap: wrap; gap: 14px; margin: 8px 0 10px; font-size: 11px; color: var(--text-2); }
-  .scope-modes label { display: inline-flex; align-items: center; gap: 5px; cursor: pointer; }
-  .scope-row { display: flex; align-items: center; gap: 8px; margin-bottom: 5px; padding: 6px 9px; border: 1px solid var(--border); border-radius: 8px; background: var(--card-soft); font-size: 11px; }
-  .scope-row input[type="checkbox"] { width: 14px; height: 14px; flex: none; cursor: pointer; }
-  .scope-row .who { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--muted); }
-  .scope-row .who b { color: var(--text); font-weight: 600; }
-  .scope-row .tag { flex: none; }
   .target-row .restore {
     flex: none; border: 0; background: transparent; color: var(--accent);
     font: inherit; cursor: pointer; padding: 3px 5px; border-radius: 5px;
@@ -364,6 +357,19 @@
   .target-row .restore:hover { background: color-mix(in srgb, var(--accent) 12%, transparent); }
 
   .card-actions { display: flex; align-items: center; gap: 2px; flex: none; margin: -3px -4px 0 0; }
+  /* The hide affordance takes the place of the status dot on hover, so a card
+     has a top-left action without shifting its whole header. */
+  .card-hide {
+    position: absolute; top: 13px; left: 8px; z-index: 2;
+    width: 20px; height: 20px; display: grid; place-items: center;
+    border: 1px solid transparent; border-radius: 6px; background: transparent;
+    color: var(--muted); cursor: pointer; opacity: 0; pointer-events: none;
+    transition: opacity .15s ease, color .15s ease, background .15s ease, border-color .15s ease;
+  }
+  .card-hide svg { width: 13px; height: 13px; display: block; }
+  .card:hover .card-hide, .card:focus-within .card-hide { opacity: 1; pointer-events: auto; }
+  .card.has-hide:hover .card-head .dot, .card.has-hide:focus-within .card-head .dot { opacity: 0; }
+  .card-hide:hover { color: var(--text); background: var(--card-soft); border-color: var(--border); }
   .card-monitor {
     flex: none; width: 24px; height: 24px; padding: 0; border-radius: 6px; cursor: pointer;
     display: inline-flex; align-items: center; justify-content: center;
@@ -413,6 +419,22 @@
 
   .list-wrap { border: 1px solid var(--border); border-radius: var(--radius); overflow: auto; background: var(--card); box-shadow: var(--shadow); }
   .list-wrap[hidden] { display: none; }
+  .hidden-servers { margin-top: 18px; border: 1px solid var(--border); border-radius: var(--radius); background: var(--card); box-shadow: var(--shadow); overflow: hidden; }
+  .hidden-servers[hidden] { display: none; }
+  .hidden-servers-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 9px 14px; background: var(--card-soft); border-bottom: 1px solid var(--border); }
+  .hidden-servers-head h2 { margin: 0; font-size: 12px; font-weight: 650; color: var(--text-2); display: flex; align-items: center; gap: 5px; }
+  .hidden-servers-head .count { color: var(--muted); font-weight: 500; }
+  .hidden-servers-head .btn { height: 26px; padding: 0 10px; font-size: 11px; border-radius: 7px; box-shadow: none; }
+  .hidden-row { display: flex; align-items: center; gap: 10px; padding: 8px 14px; font-size: 11.5px; border-bottom: 1px solid var(--border); }
+  .hidden-row:last-child { border-bottom: 0; }
+  .hidden-row .grow { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .hidden-row .hname { font-weight: 600; }
+  .hidden-row .hhost { color: var(--muted); font-variant-numeric: tabular-nums; margin-left: 6px; }
+  .hidden-row .restore {
+    flex: none; border: 1px solid var(--border); background: transparent; color: var(--accent);
+    font: inherit; font-size: 10.5px; font-weight: 600; padding: 4px 9px; border-radius: 6px; cursor: pointer;
+  }
+  .hidden-row .restore:hover { background: color-mix(in srgb, var(--accent) 10%, transparent); border-color: color-mix(in srgb, var(--accent) 34%, var(--border)); }
   table.list-table { width: 100%; border-collapse: collapse; font-size: 12px; font-variant-numeric: tabular-nums; }
   table.list-table th {
     text-align: left; padding: 9px 12px; font-size: 11px; font-weight: 650; color: var(--muted);
@@ -731,6 +753,13 @@
       <p>请在 <code>~/.ssh/config</code> 中配置服务器，或点右上角“添加服务器”，然后刷新。</p>
       <button class="btn" type="button" id="empty-refresh">重新采集</button>
     </div>
+    <section class="hidden-servers" id="hidden-servers" hidden>
+      <div class="hidden-servers-head">
+        <h2>已隐藏的服务器 <span class="count" id="hidden-count"></span></h2>
+        <button class="btn hidden-all" type="button" id="hidden-restore-all">全部恢复</button>
+      </div>
+      <div id="hidden-list"></div>
+    </section>
   </main>
 
   <footer class="foot" id="foot"></footer>
@@ -775,21 +804,6 @@
         <div class="target-list">
           <h3>已隐藏的服务器</h3>
           <div id="hidden-rows"></div>
-        </div>
-        <div class="target-list">
-          <h3>显示范围</h3>
-          <p class="target-empty">来自 <code>~/.ssh/config</code> 的服务器默认全部显示。选择“仅显示选中”后，只展示勾选的服务器；手动添加的服务器始终显示。</p>
-          <div class="scope-modes">
-            <label><input type="radio" name="scope-mode" value="all"> 全部显示</label>
-            <label><input type="radio" name="scope-mode" value="selected"> 仅显示选中的服务器</label>
-          </div>
-          <div id="scope-rows"></div>
-          <div class="form-actions">
-            <button type="button" class="btn primary" id="scope-save">保存显示范围</button>
-            <button type="button" class="btn" id="scope-all">全选</button>
-            <button type="button" class="btn" id="scope-none">全不选</button>
-            <span class="form-msg" id="scope-msg"></span>
-          </div>
         </div>
       </div>
     </div>
@@ -992,11 +1006,10 @@
     targetCancelEdit: document.getElementById('target-cancel-edit'),
     targetRows: document.getElementById('target-rows'),
     hiddenRows: document.getElementById('hidden-rows'),
-    scopeRows: document.getElementById('scope-rows'),
-    scopeSave: document.getElementById('scope-save'),
-    scopeAll: document.getElementById('scope-all'),
-    scopeNone: document.getElementById('scope-none'),
-    scopeMsg: document.getElementById('scope-msg'),
+    hiddenServers: document.getElementById('hidden-servers'),
+    hiddenCount: document.getElementById('hidden-count'),
+    hiddenList: document.getElementById('hidden-list'),
+    hiddenRestoreAll: document.getElementById('hidden-restore-all'),
     targetMsg: document.getElementById('target-msg'),
     authSelect: document.querySelector('#target-form select[name="auth"]'),
     authPassword: document.getElementById('auth-password'),
@@ -1327,6 +1340,19 @@
     }
 
     var head = el('div', 'card-head')
+    if (entry.kind !== 'local') {
+      node.classList.add('has-hide')
+      var hideBtn = el('button', 'card-hide')
+      hideBtn.type = 'button'
+      hideBtn.title = '隐藏这台服务器（在页面下方“已隐藏的服务器”里恢复）'
+      hideBtn.setAttribute('aria-label', '隐藏服务器')
+      hideBtn.innerHTML = HIDE_ICON
+      hideBtn.addEventListener('click', function (event) {
+        event.stopPropagation()
+        hideServer(entry)
+      })
+      head.appendChild(hideBtn)
+    }
     head.appendChild(el('span', 'dot'))
     var body = el('div', 'head-body')
     var nameRow = el('div', 'name-row')
@@ -1782,6 +1808,7 @@
     if (!data) {
       els.listWrap.hidden = true
       els.grid.hidden = false
+      renderHiddenServers([])
       if (state.error) {
         els.empty.hidden = false
       } else {
@@ -1789,6 +1816,8 @@
       }
       return
     }
+
+    renderHiddenServers(data.hiddenTargets)
 
     var entries = []
     if (data.local) entries.push(data.local)
@@ -1852,9 +1881,6 @@
     if (data.summary && data.summary.hiddenAuth > 0) {
       parts.push('已隐藏 ' + data.summary.hiddenAuth + ' 台认证失败')
     }
-    if (data.sources && data.sources.selectionMode === 'selected') {
-      parts.push('仅显示选中 ' + (data.sources.visible || 0) + ' 台')
-    }
     if (data.summary && data.summary.hiddenRemoved > 0) {
       parts.push('已移除 ' + data.summary.hiddenRemoved + ' 台')
     }
@@ -1870,7 +1896,7 @@
       footParts.push('已隐藏 ' + data.summary.hiddenAuth + ' 台认证失败（可在“添加服务器”里修改）')
     }
     if (data.summary && data.summary.hiddenRemoved > 0) {
-      footParts.push('已移除 ' + data.summary.hiddenRemoved + ' 台（可在“添加服务器”里恢复）')
+      footParts.push('已隐藏 ' + data.summary.hiddenRemoved + ' 台（见页面下方“已隐藏的服务器”）')
     }
     els.foot.textContent = footParts.join(' · ')
   }
@@ -2968,91 +2994,103 @@
       })
   }
 
-  var scopeState = { mode: 'all', keys: [], candidates: [] }
+  var HIDE_ICON = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3l18 18"></path><path d="M10.6 6.2A9.9 9.9 0 0 1 12 6.1c4.4 0 8 2.9 9.9 5.9a17 17 0 0 1-3.6 4"></path><path d="M6.2 6.9A17.4 17.4 0 0 0 2.1 12c1.9 3 5.5 5.9 9.9 5.9 1.4 0 2.7-.3 3.9-.8"></path><path d="M9.9 9.9a3 3 0 0 0 4.2 4.2"></path></svg>'
 
-  function scopeMode() {
-    var checked = document.querySelector('input[name="scope-mode"]:checked')
-    return checked && checked.value === 'selected' ? 'selected' : 'all'
-  }
-
-  function setScopeMode(mode) {
-    var radios = document.querySelectorAll('input[name="scope-mode"]')
-    for (var i = 0; i < radios.length; i += 1) radios[i].checked = radios[i].value === mode
-  }
-
-  function renderScope() {
-    els.scopeRows.textContent = ''
-    if (scopeState.candidates.length === 0) {
-      els.scopeRows.appendChild(el('div', 'target-empty', '没有可选的服务器（~/.ssh/config 里没有发现主机）。'))
-      return
-    }
-    scopeState.candidates.forEach(function (candidate) {
-      var row = el('label', 'scope-row')
-      var box = document.createElement('input')
-      box.type = 'checkbox'
-      box.value = candidate.key
-      box.checked = scopeState.keys.indexOf(candidate.key) >= 0
-      box.addEventListener('change', function () {
-        var index = scopeState.keys.indexOf(candidate.key)
-        if (box.checked && index < 0) scopeState.keys.push(candidate.key)
-        if (!box.checked && index >= 0) scopeState.keys.splice(index, 1)
-      })
-      row.appendChild(box)
-      var who = el('div', 'who')
-      who.appendChild(el('b', '', candidate.name || candidate.host))
-      who.appendChild(document.createTextNode(' ' + (candidate.username || '') + '@' + candidate.host + ':' + candidate.port))
-      row.appendChild(who)
-      row.appendChild(el('span', 'tag', candidate.source === 'ssh-config' ? 'SSH 配置' : 'SSH 配置'))
-      els.scopeRows.appendChild(row)
-    })
-  }
-
-  function loadSelection() {
-    fetch('api/selection', { cache: 'no-store', headers: { accept: 'application/json' } })
-      .then(function (response) {
-        if (!response.ok) throw new Error('HTTP ' + response.status)
-        return response.json()
-      })
-      .then(function (body) {
-        if (!body || body.ok !== true) throw new Error((body && body.error) || '加载失败')
-        scopeState.mode = body.selection && body.selection.mode === 'selected' ? 'selected' : 'all'
-        scopeState.keys = body.selection && Array.isArray(body.selection.keys) ? body.selection.keys.slice() : []
-        scopeState.candidates = Array.isArray(body.candidates) ? body.candidates : []
-        setScopeMode(scopeState.mode)
-        renderScope()
-      })
-      .catch(function (error) {
-        els.scopeRows.textContent = '加载失败：' + ((error && error.message) || String(error))
-      })
-  }
-
-  function saveScope() {
+  /** Hide one server from the board; it stays restorable below. */
+  function hideServer(entry) {
     if (!writeToken) {
-      els.scopeMsg.textContent = '页面令牌缺失，请刷新页面后重试'
-      els.scopeMsg.className = 'form-msg error'
+      showBanner('页面令牌缺失，请刷新页面后重试')
       return
     }
-    var keys = []
-    var boxes = els.scopeRows.querySelectorAll('input[type="checkbox"]')
-    for (var i = 0; i < boxes.length; i += 1) if (boxes[i].checked) keys.push(boxes[i].value)
-    els.scopeMsg.textContent = '保存中…'
-    els.scopeMsg.className = 'form-msg'
-    fetch('api/selection', {
+    fetch('api/hidden', {
       method: 'POST',
       headers: { 'content-type': 'application/json', 'x-monitor-token': writeToken },
-      body: JSON.stringify({ mode: scopeMode(), keys: keys }),
+      body: JSON.stringify({ host: entry.host, port: entry.port }),
     }).then(function (response) {
       return response.json().then(function (body) { return { response: response, body: body } })
     }).then(function (result) {
-      if (!result.response.ok || !result.body.ok) throw new Error(result.body.error || '保存失败')
-      scopeState.mode = result.body.selection.mode
-      scopeState.keys = result.body.selection.keys
-      els.scopeMsg.textContent = scopeState.mode === 'selected' ? '已保存：只显示选中的服务器' : '已保存：显示全部服务器'
-      els.scopeMsg.className = 'form-msg ok'
-      load(true)
+      if (!result.response.ok || !result.body.ok) throw new Error(result.body.error || '隐藏失败')
+      return load(true).then(function () {
+        showBanner('已隐藏：' + (entry.name || entry.host) + '（可在页面下方“已隐藏的服务器”恢复）')
+      })
     }).catch(function (error) {
-      els.scopeMsg.textContent = (error && error.message) || String(error)
-      els.scopeMsg.className = 'form-msg error'
+      showBanner('隐藏失败：' + ((error && error.message) || String(error)))
+    })
+  }
+
+  /** Undo one hide entry. */
+  function restoreHidden(item, button) {
+    if (!writeToken) {
+      showBanner('页面令牌缺失，请刷新页面后重试')
+      return
+    }
+    button.disabled = true
+    fetch('api/hidden/' + encodeURIComponent(item.key), {
+      method: 'DELETE',
+      headers: { 'x-monitor-token': writeToken },
+    }).then(function (response) {
+      return response.json().then(function (body) { return { response: response, body: body } })
+    }).then(function (result) {
+      if (!result.response.ok || !result.body.ok) throw new Error(result.body.error || '恢复失败')
+      return load(true).then(function () {
+        showBanner('已恢复：' + item.host)
+      })
+    }).catch(function (error) {
+      button.disabled = false
+      showBanner('恢复失败：' + ((error && error.message) || String(error)))
+    })
+  }
+
+  function restoreAllHidden() {
+    var list = ((state.data && state.data.hiddenTargets) || []).slice()
+    if (list.length === 0) return
+    if (!writeToken) {
+      showBanner('页面令牌缺失，请刷新页面后重试')
+      return
+    }
+    els.hiddenRestoreAll.disabled = true
+    var chain = Promise.resolve()
+    var failed = 0
+    list.forEach(function (item) {
+      chain = chain.then(function () {
+        return fetch('api/hidden/' + encodeURIComponent(item.key), {
+          method: 'DELETE',
+          headers: { 'x-monitor-token': writeToken },
+        }).then(function (response) {
+          if (!response.ok) failed += 1
+        }).catch(function () { failed += 1 })
+      })
+    })
+    chain.then(function () {
+      els.hiddenRestoreAll.disabled = false
+      return load(true)
+    }).then(function () {
+      showBanner(failed === 0 ? '已恢复全部隐藏的服务器' : ('恢复完成，' + failed + ' 个失败'))
+    })
+  }
+
+  /** Render the restorable hidden-server list under the board. */
+  function renderHiddenServers(hiddenTargets) {
+    var list = Array.isArray(hiddenTargets) ? hiddenTargets : []
+    els.hiddenServers.hidden = list.length === 0
+    if (list.length === 0) return
+    els.hiddenCount.textContent = '（' + list.length + '）'
+    els.hiddenList.textContent = ''
+    list.forEach(function (item) {
+      var port = Number(item.port) || 22
+      var row = el('div', 'hidden-row')
+      var grow = el('div', 'grow')
+      var name = el('span', 'hname', item.host)
+      name.title = item.host
+      grow.appendChild(name)
+      grow.appendChild(el('span', 'hhost', port === 22 ? '默认端口' : ':' + port))
+      row.appendChild(grow)
+      var restore = el('button', 'restore', '恢复')
+      restore.type = 'button'
+      restore.title = '恢复 ' + item.host + ':' + port
+      restore.addEventListener('click', function () { restoreHidden(item, restore) })
+      row.appendChild(restore)
+      els.hiddenList.appendChild(row)
     })
   }
 
@@ -3364,7 +3402,6 @@
     document.body.style.overflow = 'hidden'
     loadTargetList()
     loadHiddenList()
-    loadSelection()
     var host = els.targetForm.elements.host
     if (host) window.setTimeout(function () { host.focus() }, 30)
   }
@@ -3620,20 +3657,7 @@
 
   els.addTarget.addEventListener('click', openTargets)
   els.targetClose.addEventListener('click', closeTargets)
-  els.scopeSave.addEventListener('click', saveScope)
-  els.scopeAll.addEventListener('click', function () {
-    var boxes = els.scopeRows.querySelectorAll('input[type="checkbox"]')
-    scopeState.keys = []
-    for (var i = 0; i < boxes.length; i += 1) {
-      boxes[i].checked = true
-      scopeState.keys.push(boxes[i].value)
-    }
-  })
-  els.scopeNone.addEventListener('click', function () {
-    var boxes = els.scopeRows.querySelectorAll('input[type="checkbox"]')
-    scopeState.keys = []
-    for (var i = 0; i < boxes.length; i += 1) boxes[i].checked = false
-  })
+  els.hiddenRestoreAll.addEventListener('click', restoreAllHidden)
   function openDockerAction(kind, action, item) {
     var name = kind === 'image'
       ? ((item.repository || '<none>') + ':' + (item.tag || '<none>'))
