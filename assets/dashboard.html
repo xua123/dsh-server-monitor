@@ -429,7 +429,6 @@
   .hidden-row:last-child { border-bottom: 0; }
   .hidden-row .grow { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   .hidden-row .hname { font-weight: 600; }
-  .hidden-row .hhost { color: var(--muted); font-variant-numeric: tabular-nums; margin-left: 6px; }
   .hidden-row .restore {
     flex: none; border: 1px solid var(--border); background: transparent; color: var(--accent);
     font: inherit; font-size: 10.5px; font-weight: 600; padding: 4px 9px; border-radius: 6px; cursor: pointer;
@@ -2946,7 +2945,9 @@
   function hiddenRow(entry) {
     var row = el('div', 'target-row')
     var who = el('div', 'who')
-    who.appendChild(el('b', '', entry.host + ':' + entry.port))
+    var label = el('b', '', entry.host)
+    label.title = entry.host + ':' + entry.port
+    who.appendChild(label)
     who.appendChild(document.createTextNode(' 已从监控列表移除'))
     row.appendChild(who)
     var restore = el('button', 'restore', '恢复')
@@ -2959,7 +2960,7 @@
         return response.json().then(function (body) { return { response: response, body: body } })
       }).then(function (result) {
         if (!result.response.ok || !result.body.ok) throw new Error(result.body.error || '恢复失败')
-        setTargetMsg('已恢复 ' + entry.host + ':' + entry.port, 'ok')
+        setTargetMsg('已恢复 ' + entry.host, 'ok')
         loadHiddenList()
         load(true)
       }).catch(function (error) {
@@ -3081,9 +3082,8 @@
       var row = el('div', 'hidden-row')
       var grow = el('div', 'grow')
       var name = el('span', 'hname', item.host)
-      name.title = item.host
+      name.title = item.host + ':' + port
       grow.appendChild(name)
-      grow.appendChild(el('span', 'hhost', port === 22 ? '默认端口' : ':' + port))
       row.appendChild(grow)
       var restore = el('button', 'restore', '恢复')
       restore.type = 'button'
