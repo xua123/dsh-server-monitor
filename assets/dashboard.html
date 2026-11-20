@@ -357,18 +357,7 @@
   .target-row .restore:hover { background: color-mix(in srgb, var(--accent) 12%, transparent); }
 
   .card-actions { display: flex; align-items: center; gap: 2px; flex: none; margin: -3px -4px 0 0; }
-  /* The hide affordance takes the place of the status dot on hover, so a card
-     has a top-left action without shifting its whole header. */
-  .card-hide {
-    position: absolute; top: 13px; left: 8px; z-index: 2;
-    width: 20px; height: 20px; display: grid; place-items: center;
-    border: 1px solid transparent; border-radius: 6px; background: transparent;
-    color: var(--muted); cursor: pointer; opacity: 0; pointer-events: none;
-    transition: opacity .15s ease, color .15s ease, background .15s ease, border-color .15s ease;
-  }
-  .card-hide svg { width: 13px; height: 13px; display: block; }
-  .card:hover .card-hide, .card:focus-within .card-hide { opacity: 1; pointer-events: auto; }
-  .card.has-hide:hover .card-head .dot, .card.has-hide:focus-within .card-head .dot { opacity: 0; }
+  .card-hide svg { width: 14px; height: 14px; display: block; }
   .card-hide:hover { color: var(--text); background: var(--card-soft); border-color: var(--border); }
   .card-monitor {
     flex: none; width: 24px; height: 24px; padding: 0; border-radius: 6px; cursor: pointer;
@@ -382,7 +371,7 @@
   .card-monitor.paused:hover { background: color-mix(in srgb, #22c55e 12%, transparent); }
   .card.paused { opacity: .7; border-style: dashed; }
   .card.paused .dot { background: var(--muted); box-shadow: none; }
-  .card-remove, .card-edit, .card-pin {
+  .card-remove, .card-edit, .card-pin, .card-hide {
     flex: none; width: 26px; height: 26px; display: grid; place-items: center;
     border: 1px solid transparent; border-radius: 7px;
     background: transparent; color: var(--muted); cursor: pointer;
@@ -391,6 +380,7 @@
   .card:hover .card-remove, .card-remove:focus-visible,
   .card:hover .card-edit, .card-edit:focus-visible,
   .card:hover .card-pin, .card-pin:focus-visible,
+  .card:hover .card-hide, .card-hide:focus-visible,
   .card-pin.active { opacity: 1; }
   .card-pin.active { color: #f59e0b; }
   .card-pin:hover { color: #f59e0b; background: color-mix(in srgb, #f59e0b 12%, transparent); border-color: color-mix(in srgb, #f59e0b 28%, var(--border)); }
@@ -1339,19 +1329,6 @@
     }
 
     var head = el('div', 'card-head')
-    if (entry.kind !== 'local') {
-      node.classList.add('has-hide')
-      var hideBtn = el('button', 'card-hide')
-      hideBtn.type = 'button'
-      hideBtn.title = '隐藏这台服务器（在页面下方“已隐藏的服务器”里恢复）'
-      hideBtn.setAttribute('aria-label', '隐藏服务器')
-      hideBtn.innerHTML = HIDE_ICON
-      hideBtn.addEventListener('click', function (event) {
-        event.stopPropagation()
-        hideServer(entry)
-      })
-      head.appendChild(hideBtn)
-    }
     head.appendChild(el('span', 'dot'))
     var body = el('div', 'head-body')
     var nameRow = el('div', 'name-row')
@@ -1393,6 +1370,18 @@
 
     head.appendChild(body)
     var actionsWrap = el('div', 'card-actions')
+    if (entry.kind !== 'local') {
+      var hideBtn = el('button', 'card-hide')
+      hideBtn.type = 'button'
+      hideBtn.title = '隐藏这台服务器（在页面下方“已隐藏的服务器”里恢复）'
+      hideBtn.setAttribute('aria-label', '隐藏服务器')
+      hideBtn.innerHTML = HIDE_ICON
+      hideBtn.addEventListener('click', function (event) {
+        event.stopPropagation()
+        hideServer(entry)
+      })
+      actionsWrap.appendChild(hideBtn)
+    }
     actionsWrap.appendChild(monitorButton(entry))
     var editBtn = el('button', 'card-edit')
     editBtn.type = 'button'
