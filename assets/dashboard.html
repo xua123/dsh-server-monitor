@@ -3001,7 +3001,7 @@
     }).then(function (result) {
       if (!result.response.ok || !result.body.ok) throw new Error(result.body.error || '隐藏失败')
       return load(true).then(function () {
-        showBanner('已隐藏：' + (entry.name || entry.host) + '（可在页面下方“已隐藏的服务器”恢复）')
+        showBanner('已隐藏：' + (entry.name || entry.host) + '（可在页面下方“已隐藏的服务器”恢复）', 'ok', 3000)
       })
     }).catch(function (error) {
       showBanner('隐藏失败：' + ((error && error.message) || String(error)))
@@ -3023,7 +3023,7 @@
     }).then(function (result) {
       if (!result.response.ok || !result.body.ok) throw new Error(result.body.error || '恢复失败')
       return load(true).then(function () {
-        showBanner('已恢复：' + item.host)
+        showBanner('已恢复：' + item.host, 'ok', 3000)
       })
     }).catch(function (error) {
       button.disabled = false
@@ -3055,7 +3055,7 @@
       els.hiddenRestoreAll.disabled = false
       return load(true)
     }).then(function () {
-      showBanner(failed === 0 ? '已恢复全部隐藏的服务器' : ('恢复完成，' + failed + ' 个失败'))
+      showBanner(failed === 0 ? '已恢复全部隐藏的服务器' : ('恢复完成，' + failed + ' 个失败'), failed === 0 ? 'ok' : undefined, failed === 0 ? 3000 : 0)
     })
   }
 
@@ -3208,7 +3208,7 @@
             return
           }
           if (finalView && finalView.status === 'online') {
-            showBanner('重连成功：' + (finalView.name || finalView.host) + (describeHost(finalView) ? '（' + describeHost(finalView) + '）' : ''), 'ok')
+            showBanner('重连成功：' + (finalView.name || finalView.host) + (describeHost(finalView) ? '（' + describeHost(finalView) + '）' : ''), 'ok', 3000)
             return
           }
           showBanner('仍然无法连接：' + ((finalView && finalView.error && finalView.error.message) || '未知原因'))
@@ -3454,7 +3454,14 @@
     })
   }
 
-  function showBanner(message, tone) {
+  var bannerTimer = null
+
+  /** Show a banner; `autoHideMs` turns it into a short-lived confirmation. */
+  function showBanner(message, tone, autoHideMs) {
+    if (bannerTimer !== null) {
+      window.clearTimeout(bannerTimer)
+      bannerTimer = null
+    }
     if (!message) {
       els.banner.hidden = true
       els.banner.textContent = ''
@@ -3464,6 +3471,12 @@
     els.banner.hidden = false
     els.banner.textContent = message
     els.banner.classList.toggle('ok', tone === 'ok')
+    if (autoHideMs > 0) {
+      bannerTimer = window.setTimeout(function () {
+        bannerTimer = null
+        showBanner(null)
+      }, autoHideMs)
+    }
   }
 
   function setBusy(busy) {
