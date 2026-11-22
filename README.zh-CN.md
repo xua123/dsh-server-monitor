@@ -126,14 +126,6 @@ https://github.com/xua123/dsh-server-monitor/releases/download/v0.2.1/dsh-server
 
 ![容器详情](docs/preview-docker.png)
 
-## 0.2.1 更新
-
-- SSH 认证失败不再导致 DSH 宿主进程崩溃；不再向传输层提供无人监听的 SSH agent。
-- 连接失败的主机以灰度卡片保留，支持重连与凭据编辑（含 ssh-config 主机，地址与端口可改）。
-- 新增眼睛按钮隐藏服务器，并在面板下方提供持久化的隐藏列表。
-- 批量删除镜像/容器会列出目标清单并逐项显示进度。
-- 移除了「显示范围」（全部显示 / 仅显示选中）筛选，改为按需隐藏单台主机。
-
 ## 安全
 
 - 资源采集只使用 `/proc`、`df`、`nvidia-smi`、`npu-smi`、`hy-smi` 等只读命令；

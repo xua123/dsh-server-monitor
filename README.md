@@ -127,14 +127,6 @@ Process termination and Docker mutations require the page token and a confirmati
 
 ![Container details](docs/preview-docker.png)
 
-## What's new in 0.2.1
-
-- An SSH authentication failure no longer kills the DSH host process; a dead SSH agent is no longer offered to the transport.
-- Failed hosts are listed as greyscale cards with reconnect and credential editing (SSH-config hosts included, address and port editable).
-- Servers can be hidden with the eye button and restored from a persistent list under the board.
-- Batch image/container deletion shows the target list and per-item progress.
-- The **显示范围 / display scope** filter (show all / only selected) was removed; use the eye button to hide individual hosts.
-
 ## Security and privacy
 
 - Resource collection uses read-only commands such as `/proc`, `df`, `nvidia-smi`, `npu-smi` and `hy-smi`.
