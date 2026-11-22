@@ -1,6 +1,8 @@
 [
   "docs/preview.png",
+  "docs/preview-list.png",
   "docs/preview-processes.png",
   "docs/preview-memory.png",
-  "docs/preview-docker.png"
+  "docs/preview-docker.png",
+  "docs/preview-credentials.png"
 ]

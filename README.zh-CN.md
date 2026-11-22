@@ -57,6 +57,10 @@ https://github.com/xua123/dsh-server-monitor/releases/download/v0.2.1/dsh-server
 
 支持搜索、标签筛选、卡片/列表视图，以及按显存余量、CPU、内存或平均利用率排序。
 
+同一面板的列表视图：
+
+![列表视图](docs/preview-list.png)
+
 ### 会话页签
 
 在会话中打开「资源监控」页签：页签读取会话工作区，只展示匹配的那台服务器；匹配不到时可在页签头部选择。
@@ -71,6 +75,10 @@ https://github.com/xua123/dsh-server-monitor/releases/download/v0.2.1/dsh-server
 - 保存成功会关闭弹窗、闪一下对应卡片并在顶部显示几秒的绿色提示；连接失败则保留弹窗和真实 SSH 错误，方便继续改凭据。
 
 如果更希望认证失败的主机折叠成页脚一行提示，可在插件配置里设置 `hideAuthFailures: true`。
+
+连不上的主机仍保留卡片，可就地填写密码或私钥修复：
+
+![为离线服务器设置凭据](docs/preview-credentials.png)
 
 ### 隐藏与恢复
 

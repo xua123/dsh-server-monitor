@@ -58,6 +58,10 @@ Click the server icon in the left sidebar. The panel lists:
 
 It supports search, tag filters, card/list views, and sorting by remaining accelerator memory, CPU, memory or average utilization.
 
+The same board in list view:
+
+![Server list view](docs/preview-list.png)
+
 ### Session tab
 
 Open the **资源监控** tab in a conversation. The tab reads the session workspace and shows the matching server only. If no server can be matched, choose one from the selector in the tab header.
@@ -72,6 +76,10 @@ Hosts that fail to connect are shown as greyscale offline cards rather than disa
 - A successful save closes the dialog, flashes the matching card and shows a green confirmation banner for a few seconds. A failed connection keeps the dialog open with the real SSH error so the credentials can be corrected.
 
 Set `hideAuthFailures: true` in the plugin configuration if you prefer authentication failures to be folded into one footer line instead of grey cards.
+
+A failed login keeps its card; fix it in place with a password or key:
+
+![Set credentials for an unreachable server](docs/preview-credentials.png)
 
 ### Hiding and restoring servers
 
