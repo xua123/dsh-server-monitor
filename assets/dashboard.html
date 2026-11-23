@@ -322,6 +322,16 @@
   }
   .target-row .danger:hover { background: color-mix(in srgb, var(--danger) 12%, transparent); }
   .target-empty { padding: 10px 2px; font-size: 11px; color: var(--muted); }
+  .deleted-section { margin: 18px 18px 8px; }
+  .deleted-toggle { width: 100%; display: flex; align-items: center; gap: 8px; padding: 9px 10px; border: 1px solid var(--border); border-radius: 9px; background: var(--card-soft); color: var(--text-2); font: inherit; font-size: 12px; font-weight: 600; cursor: pointer; text-align: left; }
+  .deleted-toggle:hover { background: var(--bg-soft); }
+  .deleted-toggle .arrow { width: 12px; color: var(--muted); }
+  .deleted-count { margin-left: auto; padding: 1px 7px; border-radius: 999px; background: var(--bg-soft); color: var(--muted); font-size: 10.5px; }
+  .deleted-list { margin-top: 7px; display: grid; gap: 6px; }
+  .deleted-row { display: flex; align-items: center; gap: 8px; padding: 8px 10px; border: 1px solid var(--border); border-radius: 8px; background: var(--card); font-size: 11px; }
+  .deleted-row .who { flex: 1; min-width: 0; color: var(--muted); word-break: break-all; }
+  .deleted-row .who b { color: var(--text); font-weight: 600; }
+  .deleted-row .btn { flex: none; }
   .scope-modes { display: flex; flex-wrap: wrap; gap: 14px; margin: 8px 0 10px; font-size: 11px; color: var(--text-2); }
   .scope-modes label { display: inline-flex; align-items: center; gap: 5px; cursor: pointer; }
   .scope-row { display: flex; align-items: center; gap: 8px; margin-bottom: 5px; padding: 6px 9px; border: 1px solid var(--border); border-radius: 8px; background: var(--card-soft); font-size: 11px; }
@@ -682,6 +692,15 @@
     </div>
   </main>
 
+  <section class="deleted-section" id="deleted-section">
+    <button class="deleted-toggle" id="deleted-toggle" type="button" aria-expanded="false">
+      <span class="arrow" id="deleted-arrow">▸</span>
+      <span>已删除服务器</span>
+      <span class="deleted-count" id="deleted-count">0</span>
+    </button>
+    <div class="deleted-list" id="deleted-list" hidden></div>
+  </section>
+
   <footer class="foot" id="foot"></footer>
 
   <div class="modal" id="target-modal" hidden>
@@ -717,29 +736,6 @@
             <span class="form-msg" id="target-msg"></span>
           </div>
         </form>
-        <div class="target-list">
-          <h3>已添加的服务器</h3>
-          <div id="target-rows"></div>
-        </div>
-        <div class="target-list">
-          <h3>已隐藏的服务器</h3>
-          <div id="hidden-rows"></div>
-        </div>
-        <div class="target-list">
-          <h3>显示范围</h3>
-          <p class="target-empty">来自 <code>~/.ssh/config</code> 的服务器默认全部显示。选择“仅显示选中”后，只展示勾选的服务器；手动添加的服务器始终显示。</p>
-          <div class="scope-modes">
-            <label><input type="radio" name="scope-mode" value="all"> 全部显示</label>
-            <label><input type="radio" name="scope-mode" value="selected"> 仅显示选中的服务器</label>
-          </div>
-          <div id="scope-rows"></div>
-          <div class="form-actions">
-            <button type="button" class="btn primary" id="scope-save">保存显示范围</button>
-            <button type="button" class="btn" id="scope-all">全选</button>
-            <button type="button" class="btn" id="scope-none">全不选</button>
-            <span class="form-msg" id="scope-msg"></span>
-          </div>
-        </div>
       </div>
     </div>
   </div>
@@ -917,13 +913,11 @@
     targetSubmit: document.getElementById('target-submit'),
     targetTest: document.getElementById('target-test'),
     targetCancelEdit: document.getElementById('target-cancel-edit'),
-    targetRows: document.getElementById('target-rows'),
-    hiddenRows: document.getElementById('hidden-rows'),
-    scopeRows: document.getElementById('scope-rows'),
-    scopeSave: document.getElementById('scope-save'),
-    scopeAll: document.getElementById('scope-all'),
-    scopeNone: document.getElementById('scope-none'),
-    scopeMsg: document.getElementById('scope-msg'),
+    deletedSection: document.getElementById('deleted-section'),
+    deletedToggle: document.getElementById('deleted-toggle'),
+    deletedArrow: document.getElementById('deleted-arrow'),
+    deletedCount: document.getElementById('deleted-count'),
+    deletedList: document.getElementById('deleted-list'),
     targetMsg: document.getElementById('target-msg'),
     authSelect: document.querySelector('#target-form select[name="auth"]'),
     authPassword: document.getElementById('auth-password'),
@@ -2661,7 +2655,6 @@
       }).then(function (result) {
         if (!result.response.ok || !result.body.ok) throw new Error(result.body.error || '删除失败')
         setTargetMsg('已删除', 'ok')
-        loadTargetList()
         load(true)
       }).catch(function (error) {
         setTargetMsg((error && error.message) || String(error), 'error')
@@ -2672,6 +2665,7 @@
   }
 
   function renderTargets(list) {
+    if (!els.targetRows) return
     els.targetRows.textContent = ''
     if (!list || list.length === 0) {
       els.targetRows.appendChild(el('div', 'target-empty', '还没有手动添加的服务器。'))
@@ -2681,6 +2675,7 @@
   }
 
   function loadTargetList() {
+    if (!els.targetRows) return
     fetch('api/targets', { cache: 'no-store', headers: { accept: 'application/json' } })
       .then(function (response) {
         if (!response.ok) throw new Error('HTTP ' + response.status)
@@ -2696,12 +2691,12 @@
   }
 
   function hiddenRow(entry) {
-    var row = el('div', 'target-row')
+    var row = el('div', 'deleted-row')
     var who = el('div', 'who')
     who.appendChild(el('b', '', entry.host + ':' + entry.port))
     who.appendChild(document.createTextNode(' 已从监控列表移除'))
     row.appendChild(who)
-    var restore = el('button', 'restore', '恢复')
+    var restore = el('button', 'btn', '恢复')
     restore.type = 'button'
     restore.addEventListener('click', function () {
       fetch('api/hidden/' + encodeURIComponent(entry.key), {
@@ -2711,24 +2706,64 @@
         return response.json().then(function (body) { return { response: response, body: body } })
       }).then(function (result) {
         if (!result.response.ok || !result.body.ok) throw new Error(result.body.error || '恢复失败')
-        setTargetMsg('已恢复 ' + entry.host + ':' + entry.port, 'ok')
+        showBanner('已恢复 ' + entry.host + ':' + entry.port)
         loadHiddenList()
         load(true)
       }).catch(function (error) {
-        setTargetMsg((error && error.message) || String(error), 'error')
+        showBanner('恢复失败：' + ((error && error.message) || String(error)))
       })
     })
     row.appendChild(restore)
+
+    var purge = el('button', 'btn danger', '彻底删除')
+    purge.type = 'button'
+    var armed = false
+    var timer = 0
+    purge.addEventListener('click', function () {
+      if (!armed) {
+        armed = true
+        purge.textContent = '确认删除 SSH 配置'
+        purge.title = '再次点击将从 ~/.ssh/config 删除这台服务器'
+        timer = window.setTimeout(function () {
+          armed = false
+          purge.textContent = '彻底删除'
+          purge.title = ''
+        }, 5000)
+        return
+      }
+      window.clearTimeout(timer)
+      purge.disabled = true
+      purge.textContent = '删除中…'
+      fetch('api/hidden/' + encodeURIComponent(entry.key) + '/purge', {
+        method: 'POST',
+        headers: { 'x-monitor-token': writeToken },
+      }).then(function (response) {
+        return response.json().then(function (body) { return { response: response, body: body } })
+      }).then(function (result) {
+        if (!result.response.ok || !result.body.ok) throw new Error(result.body.error || '删除失败')
+        showBanner('已删除 SSH 配置：' + entry.host + ':' + entry.port + '（备份：' + result.body.backup + '）')
+        loadHiddenList()
+        load(true)
+      }).catch(function (error) {
+        armed = false
+        purge.disabled = false
+        purge.textContent = '彻底删除'
+        showBanner('彻底删除失败：' + ((error && error.message) || String(error)))
+      })
+    })
+    row.appendChild(purge)
     return row
   }
 
   function renderHidden(list) {
-    els.hiddenRows.textContent = ''
-    if (!list || list.length === 0) {
-      els.hiddenRows.appendChild(el('div', 'target-empty', '没有被隐藏的服务器。'))
+    els.deletedList.textContent = ''
+    var count = Array.isArray(list) ? list.length : 0
+    els.deletedCount.textContent = String(count)
+    if (count === 0) {
+      els.deletedList.appendChild(el('div', 'target-empty', '没有被隐藏的服务器。'))
       return
     }
-    list.forEach(function (entry) { els.hiddenRows.appendChild(hiddenRow(entry)) })
+    list.forEach(function (entry) { els.deletedList.appendChild(hiddenRow(entry)) })
   }
 
   function loadHiddenList() {
@@ -2742,96 +2777,8 @@
         renderHidden(body.targets || [])
       })
       .catch(function (error) {
-        els.hiddenRows.textContent = '加载失败：' + ((error && error.message) || String(error))
+        els.deletedList.textContent = '加载失败：' + ((error && error.message) || String(error))
       })
-  }
-
-  var scopeState = { mode: 'all', keys: [], candidates: [] }
-
-  function scopeMode() {
-    var checked = document.querySelector('input[name="scope-mode"]:checked')
-    return checked && checked.value === 'selected' ? 'selected' : 'all'
-  }
-
-  function setScopeMode(mode) {
-    var radios = document.querySelectorAll('input[name="scope-mode"]')
-    for (var i = 0; i < radios.length; i += 1) radios[i].checked = radios[i].value === mode
-  }
-
-  function renderScope() {
-    els.scopeRows.textContent = ''
-    if (scopeState.candidates.length === 0) {
-      els.scopeRows.appendChild(el('div', 'target-empty', '没有可选的服务器（~/.ssh/config 里没有发现主机）。'))
-      return
-    }
-    scopeState.candidates.forEach(function (candidate) {
-      var row = el('label', 'scope-row')
-      var box = document.createElement('input')
-      box.type = 'checkbox'
-      box.value = candidate.key
-      box.checked = scopeState.keys.indexOf(candidate.key) >= 0
-      box.addEventListener('change', function () {
-        var index = scopeState.keys.indexOf(candidate.key)
-        if (box.checked && index < 0) scopeState.keys.push(candidate.key)
-        if (!box.checked && index >= 0) scopeState.keys.splice(index, 1)
-      })
-      row.appendChild(box)
-      var who = el('div', 'who')
-      who.appendChild(el('b', '', candidate.name || candidate.host))
-      who.appendChild(document.createTextNode(' ' + (candidate.username || '') + '@' + candidate.host + ':' + candidate.port))
-      row.appendChild(who)
-      row.appendChild(el('span', 'tag', candidate.source === 'ssh-config' ? 'SSH 配置' : 'SSH 配置'))
-      els.scopeRows.appendChild(row)
-    })
-  }
-
-  function loadSelection() {
-    fetch('api/selection', { cache: 'no-store', headers: { accept: 'application/json' } })
-      .then(function (response) {
-        if (!response.ok) throw new Error('HTTP ' + response.status)
-        return response.json()
-      })
-      .then(function (body) {
-        if (!body || body.ok !== true) throw new Error((body && body.error) || '加载失败')
-        scopeState.mode = body.selection && body.selection.mode === 'selected' ? 'selected' : 'all'
-        scopeState.keys = body.selection && Array.isArray(body.selection.keys) ? body.selection.keys.slice() : []
-        scopeState.candidates = Array.isArray(body.candidates) ? body.candidates : []
-        setScopeMode(scopeState.mode)
-        renderScope()
-      })
-      .catch(function (error) {
-        els.scopeRows.textContent = '加载失败：' + ((error && error.message) || String(error))
-      })
-  }
-
-  function saveScope() {
-    if (!writeToken) {
-      els.scopeMsg.textContent = '页面令牌缺失，请刷新页面后重试'
-      els.scopeMsg.className = 'form-msg error'
-      return
-    }
-    var keys = []
-    var boxes = els.scopeRows.querySelectorAll('input[type="checkbox"]')
-    for (var i = 0; i < boxes.length; i += 1) if (boxes[i].checked) keys.push(boxes[i].value)
-    els.scopeMsg.textContent = '保存中…'
-    els.scopeMsg.className = 'form-msg'
-    fetch('api/selection', {
-      method: 'POST',
-      headers: { 'content-type': 'application/json', 'x-monitor-token': writeToken },
-      body: JSON.stringify({ mode: scopeMode(), keys: keys }),
-    }).then(function (response) {
-      return response.json().then(function (body) { return { response: response, body: body } })
-    }).then(function (result) {
-      if (!result.response.ok || !result.body.ok) throw new Error(result.body.error || '保存失败')
-      scopeState.mode = result.body.selection.mode
-      scopeState.keys = result.body.selection.keys
-      els.scopeMsg.textContent = scopeState.mode === 'selected' ? '已保存：只显示选中的服务器' : '已保存：显示全部服务器'
-      els.scopeMsg.className = 'form-msg ok'
-      load(true)
-    }).catch(function (error) {
-      els.scopeMsg.textContent = (error && error.message) || String(error)
-      els.scopeMsg.className = 'form-msg error'
-    })
   }
 
   /** Card trash button: manual targets are deleted, discovered ones are hidden. */
@@ -2953,9 +2900,6 @@
     resetTargetEdit()
     els.modal.hidden = false
     document.body.style.overflow = 'hidden'
-    loadTargetList()
-    loadHiddenList()
-    loadSelection()
     var host = els.targetForm.elements.host
     if (host) window.setTimeout(function () { host.focus() }, 30)
   }
@@ -2989,7 +2933,6 @@
       if (!result.response.ok || !result.payload.ok) throw new Error(result.payload.error || '保存失败')
       resetTargetEdit()
       setTargetMsg(isEdit ? '已更新，正在重新采集…' : '已添加，正在建立 SSH 连接…', 'ok')
-      loadTargetList()
       load(true)
     }).catch(function (error) {
       setTargetMsg((error && error.message) || String(error), 'error')
@@ -3186,19 +3129,12 @@
 
   els.addTarget.addEventListener('click', openTargets)
   els.targetClose.addEventListener('click', closeTargets)
-  els.scopeSave.addEventListener('click', saveScope)
-  els.scopeAll.addEventListener('click', function () {
-    var boxes = els.scopeRows.querySelectorAll('input[type="checkbox"]')
-    scopeState.keys = []
-    for (var i = 0; i < boxes.length; i += 1) {
-      boxes[i].checked = true
-      scopeState.keys.push(boxes[i].value)
-    }
-  })
-  els.scopeNone.addEventListener('click', function () {
-    var boxes = els.scopeRows.querySelectorAll('input[type="checkbox"]')
-    scopeState.keys = []
-    for (var i = 0; i < boxes.length; i += 1) boxes[i].checked = false
+  els.deletedToggle.addEventListener('click', function () {
+    var open = els.deletedList.hidden
+    els.deletedList.hidden = !open
+    els.deletedArrow.textContent = open ? '▾' : '▸'
+    els.deletedToggle.setAttribute('aria-expanded', open ? 'true' : 'false')
+    if (open) loadHiddenList()
   })
   function openDockerAction(kind, action, item) {
     var name = kind === 'image'
@@ -3576,6 +3512,7 @@
   state.ticker = window.setInterval(tick, 1000)
   function bootMonitor() {
     render()
+    loadHiddenList()
     load(false)
   }
   if (isWorkspaceScope && (workspaceSession || workspacePath)) {

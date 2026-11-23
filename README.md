@@ -11,6 +11,7 @@ A server resource monitor for [DeepSeek Harness](https://github.com/deepseek-ai/
 - **Host resources** — CPU, memory, swap, disk mounts, network throughput, load average, uptime and SSH latency.
 - **Accelerators** — per-card utilization, memory, temperature and power for NVIDIA GPU, Huawei Ascend NPU and Hygon DCU.
 - **Processes** — sortable process table, process search, and confirmed `SIGTERM` termination with a `SIGKILL` fallback.
+- **已删除服务器**：主面板下方展开，可恢复或彻底删除 SSH 配置。
 - **Docker** — image and container lists, start/stop/restart/delete, multi-select deletion, startup parameters, and an image-to-container dependency tree.
 - **Two scopes** — a global server panel and a session-scoped server tab that follows the current workspace.
 - **Read-only collection** — resource samples use read-only commands; credentials stay on the local machine.
