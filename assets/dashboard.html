@@ -171,11 +171,6 @@
     border: 1px solid color-mix(in srgb, var(--danger) 30%, var(--border));
   }
   .banner[hidden] { display: none; }
-  .banner.ok {
-    color: var(--ok);
-    background: color-mix(in srgb, var(--ok) 10%, var(--card));
-    border-color: color-mix(in srgb, var(--ok) 32%, var(--border));
-  }
 
   main { flex: 1; padding: 16px 18px 26px; }
   .grid {
@@ -200,10 +195,6 @@
   .card.offline::before { background: linear-gradient(90deg, var(--danger), color-mix(in srgb, var(--danger) 35%, transparent) 65%, transparent); }
   .card.connecting::before { background: linear-gradient(90deg, var(--warn), color-mix(in srgb, var(--warn) 30%, transparent) 65%, transparent); }
   .card.critical { border-color: color-mix(in srgb, var(--danger) 45%, var(--border)); }
-  /* A host we could not reach is deliberately monochrome; colour comes back on
-     hover/focus so the reconnect and edit actions stay discoverable. */
-  .card.offline { filter: grayscale(1); opacity: .78; }
-  .card.offline:hover, .card.offline:focus-within { filter: none; opacity: 1; }
 
   .card-head { display: flex; align-items: flex-start; gap: 9px; min-width: 0; }
   .dot { width: 8px; height: 8px; border-radius: 50%; margin-top: 6px; flex: none; background: var(--ok); box-shadow: 0 0 0 3px color-mix(in srgb, var(--ok) 18%, transparent); }
@@ -250,20 +241,7 @@
     color: var(--danger); background: color-mix(in srgb, var(--danger) 9%, var(--card));
     border: 1px solid color-mix(in srgb, var(--danger) 24%, var(--border));
     overflow-wrap: anywhere;
-    display: flex; flex-wrap: wrap; align-items: flex-end; gap: 6px 8px;
   }
-  .error-msg { flex: 1 1 100%; min-width: 0; }
-  .error-actions { display: flex; flex-wrap: wrap; gap: 6px; }
-  .error-retry, .error-edit-btn {
-    font: inherit; font-size: 10.5px; line-height: 1; padding: 5px 9px; border-radius: 6px;
-    border: 1px solid color-mix(in srgb, var(--danger) 32%, var(--border));
-    background: color-mix(in srgb, var(--danger) 8%, var(--card)); color: var(--danger);
-    cursor: pointer; transition: background .15s ease, border-color .15s ease;
-  }
-  .error-retry:hover { background: color-mix(in srgb, var(--danger) 17%, var(--card)); border-color: color-mix(in srgb, var(--danger) 52%, var(--border)); }
-  .error-retry[disabled] { opacity: .6; cursor: default; }
-  .error-edit-btn { color: var(--text-2); border-color: var(--border); background: var(--card-soft); }
-  .error-edit-btn:hover { color: var(--text); border-color: color-mix(in srgb, var(--accent) 35%, var(--border)); background: color-mix(in srgb, var(--accent) 8%, var(--card)); }
   .error-box .stale-note { display: block; color: var(--muted); margin-top: 2px; }
   .collecting {
     margin-top: 12px; padding: 14px 10px; border-radius: 9px; text-align: center;
@@ -284,12 +262,6 @@
   .skeleton { pointer-events: none; }
   .sk-line { height: 11px; border-radius: 6px; background: linear-gradient(90deg, var(--track), color-mix(in srgb, var(--track) 55%, var(--card)), var(--track)); background-size: 200% 100%; animation: shimmer 1.3s ease-in-out infinite; margin-bottom: 9px; }
   @keyframes shimmer { 0% { background-position: 200% 0; } 100% { background-position: -200% 0; } }
-  @keyframes card-flash {
-    0% { box-shadow: 0 0 0 0 color-mix(in srgb, var(--accent) 55%, transparent); }
-    70% { box-shadow: 0 0 0 5px color-mix(in srgb, var(--accent) 0%, transparent); }
-    100% { box-shadow: var(--shadow); }
-  }
-  .card.flash { animation: card-flash 1.3s ease-out 2; }
 
   footer.foot { padding: 0 18px 18px; color: var(--muted); font-size: 10.5px; }
   footer.foot code { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: 10px; }
@@ -350,6 +322,13 @@
   }
   .target-row .danger:hover { background: color-mix(in srgb, var(--danger) 12%, transparent); }
   .target-empty { padding: 10px 2px; font-size: 11px; color: var(--muted); }
+  .scope-modes { display: flex; flex-wrap: wrap; gap: 14px; margin: 8px 0 10px; font-size: 11px; color: var(--text-2); }
+  .scope-modes label { display: inline-flex; align-items: center; gap: 5px; cursor: pointer; }
+  .scope-row { display: flex; align-items: center; gap: 8px; margin-bottom: 5px; padding: 6px 9px; border: 1px solid var(--border); border-radius: 8px; background: var(--card-soft); font-size: 11px; }
+  .scope-row input[type="checkbox"] { width: 14px; height: 14px; flex: none; cursor: pointer; }
+  .scope-row .who { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--muted); }
+  .scope-row .who b { color: var(--text); font-weight: 600; }
+  .scope-row .tag { flex: none; }
   .target-row .restore {
     flex: none; border: 0; background: transparent; color: var(--accent);
     font: inherit; cursor: pointer; padding: 3px 5px; border-radius: 5px;
@@ -357,8 +336,6 @@
   .target-row .restore:hover { background: color-mix(in srgb, var(--accent) 12%, transparent); }
 
   .card-actions { display: flex; align-items: center; gap: 2px; flex: none; margin: -3px -4px 0 0; }
-  .card-hide svg { width: 14px; height: 14px; display: block; }
-  .card-hide:hover { color: var(--text); background: var(--card-soft); border-color: var(--border); }
   .card-monitor {
     flex: none; width: 24px; height: 24px; padding: 0; border-radius: 6px; cursor: pointer;
     display: inline-flex; align-items: center; justify-content: center;
@@ -371,7 +348,7 @@
   .card-monitor.paused:hover { background: color-mix(in srgb, #22c55e 12%, transparent); }
   .card.paused { opacity: .7; border-style: dashed; }
   .card.paused .dot { background: var(--muted); box-shadow: none; }
-  .card-remove, .card-edit, .card-pin, .card-hide {
+  .card-remove, .card-edit, .card-pin {
     flex: none; width: 26px; height: 26px; display: grid; place-items: center;
     border: 1px solid transparent; border-radius: 7px;
     background: transparent; color: var(--muted); cursor: pointer;
@@ -380,7 +357,6 @@
   .card:hover .card-remove, .card-remove:focus-visible,
   .card:hover .card-edit, .card-edit:focus-visible,
   .card:hover .card-pin, .card-pin:focus-visible,
-  .card:hover .card-hide, .card-hide:focus-visible,
   .card-pin.active { opacity: 1; }
   .card-pin.active { color: #f59e0b; }
   .card-pin:hover { color: #f59e0b; background: color-mix(in srgb, #f59e0b 12%, transparent); border-color: color-mix(in srgb, #f59e0b 28%, var(--border)); }
@@ -409,21 +385,6 @@
 
   .list-wrap { border: 1px solid var(--border); border-radius: var(--radius); overflow: auto; background: var(--card); box-shadow: var(--shadow); }
   .list-wrap[hidden] { display: none; }
-  .hidden-servers { margin-top: 18px; border: 1px solid var(--border); border-radius: var(--radius); background: var(--card); box-shadow: var(--shadow); overflow: hidden; }
-  .hidden-servers[hidden] { display: none; }
-  .hidden-servers-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 9px 14px; background: var(--card-soft); border-bottom: 1px solid var(--border); }
-  .hidden-servers-head h2 { margin: 0; font-size: 12px; font-weight: 650; color: var(--text-2); display: flex; align-items: center; gap: 5px; }
-  .hidden-servers-head .count { color: var(--muted); font-weight: 500; }
-  .hidden-servers-head .btn { height: 26px; padding: 0 10px; font-size: 11px; border-radius: 7px; box-shadow: none; }
-  .hidden-row { display: flex; align-items: center; gap: 10px; padding: 8px 14px; font-size: 11.5px; border-bottom: 1px solid var(--border); }
-  .hidden-row:last-child { border-bottom: 0; }
-  .hidden-row .grow { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-  .hidden-row .hname { font-weight: 600; }
-  .hidden-row .restore {
-    flex: none; border: 1px solid var(--border); background: transparent; color: var(--accent);
-    font: inherit; font-size: 10.5px; font-weight: 600; padding: 4px 9px; border-radius: 6px; cursor: pointer;
-  }
-  .hidden-row .restore:hover { background: color-mix(in srgb, var(--accent) 10%, transparent); border-color: color-mix(in srgb, var(--accent) 34%, var(--border)); }
   table.list-table { width: 100%; border-collapse: collapse; font-size: 12px; font-variant-numeric: tabular-nums; }
   table.list-table th {
     text-align: left; padding: 9px 12px; font-size: 11px; font-weight: 650; color: var(--muted);
@@ -565,18 +526,6 @@
   .docker-left { display: flex; align-items: center; gap: 8px; flex: 1; min-width: 0; }
   .docker-left input[type="checkbox"] { flex: none; accent-color: var(--accent); }
   .docker-batch-bar { display: flex; align-items: center; gap: 8px; margin: 6px 0 10px; padding: 8px 10px; border: 1px solid var(--border); border-radius: 8px; background: var(--card-soft); font-size: 11px; color: var(--text-2); }
-  .batch-progress { height: 6px; border-radius: 99px; background: var(--track); overflow: hidden; margin: 2px 0 6px; }
-  .batch-progress > i { display: block; height: 100%; width: 0; border-radius: 99px; background: linear-gradient(90deg, var(--accent), var(--accent-2)); transition: width .25s ease; }
-  .batch-count { font-size: 11px; color: var(--muted); margin-bottom: 8px; font-variant-numeric: tabular-nums; }
-  .batch-list { max-height: min(44vh, 300px); overflow: auto; border: 1px solid var(--border); border-radius: 9px; background: var(--card-soft); }
-  .batch-row { display: flex; align-items: baseline; gap: 10px; padding: 7px 10px; font-size: 11.5px; border-bottom: 1px solid var(--border); }
-  .batch-row:last-child { border-bottom: 0; }
-  .batch-row .bname { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-variant-numeric: tabular-nums; }
-  .batch-row .bstate { flex: none; max-width: 52%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 10.5px; color: var(--muted); }
-  .batch-row.running .bstate { color: var(--warn); }
-  .batch-row.done .bstate { color: var(--ok); }
-  .batch-row.failed .bstate { color: var(--danger); }
-  .batch-row.failed .bname { color: color-mix(in srgb, var(--danger) 65%, var(--text)); }
   .docker-tree-toggle { margin-top: 7px; padding: 0; border: 0; background: transparent; color: var(--accent); font: inherit; font-size: 10.5px; cursor: pointer; }
   .docker-tree { margin-top: 4px; display: grid; gap: 2px; }
   .docker-tree-item { text-align: left; border: 0; background: transparent; color: var(--text-2); font: inherit; font-size: 10.5px; padding: 2px 4px; border-radius: 5px; cursor: pointer; }
@@ -589,22 +538,11 @@
   button.btn.docker-action-btn { padding: 1px 8px; height: 22px; font-size: 10.5px; line-height: 18px; border-radius: 6px; }
   .docker-sub { margin-top: 4px; font-size: 10.5px; color: var(--muted); word-break: break-all; line-height: 1.5; }
   .docker-meta { margin-top: 7px; display: flex; gap: 6px 14px; flex-wrap: wrap; font-size: 10.5px; color: var(--text-2); }
-  .proc-actions { display: inline-flex; align-items: center; justify-content: flex-end; gap: 2px; }
-  /* Row actions are quiet ghost pills: a border on every row read as clutter,
-     so the outline and fill only appear on hover. */
-  .proc-action-btn {
-    display: inline-flex; align-items: center; gap: 4px;
-    height: 24px; padding: 0 8px; border-radius: 7px;
-    border: 1px solid transparent; background: transparent;
-    color: var(--text-2); font-size: 10.5px; font-weight: 600; line-height: 1;
-    cursor: pointer; transition: color .15s ease, background .15s ease, border-color .15s ease;
-  }
-  .proc-action-btn svg { width: 12px; height: 12px; display: block; }
-  .proc-table tr:hover .proc-action-btn { background: var(--card-soft); border-color: var(--border); color: var(--text); }
-  .proc-action-btn.locate:hover { color: var(--accent); background: color-mix(in srgb, var(--accent) 10%, transparent); border-color: color-mix(in srgb, var(--accent) 34%, var(--border)); }
-  .proc-action-btn.stop:hover { color: var(--danger); background: color-mix(in srgb, var(--danger) 10%, transparent); border-color: color-mix(in srgb, var(--danger) 34%, var(--border)); }
-  .proc-action-btn:focus-visible { outline: 2px solid color-mix(in srgb, var(--accent) 45%, transparent); outline-offset: 1px; }
-  .proc-table th:last-child, .proc-table td:last-child { text-align: right; white-space: nowrap; }
+  .proc-action-btn { padding: 1px 8px; height: 22px; font-size: 11px; line-height: 18px; border-radius: 6px; }
+  .btn.proc-action-btn { background: transparent; border: 1px solid var(--border); color: var(--text-2); }
+  .btn.proc-action-btn.warn { color: var(--warn); border-color: color-mix(in srgb, var(--warn) 45%, var(--border)); background: transparent; }
+  .btn.proc-action-btn.info { color: var(--accent); border-color: color-mix(in srgb, var(--accent) 45%, var(--border)); background: transparent; }
+  .btn.proc-action-btn:hover { background: var(--bg-soft); }
   .docker-container-cell { max-width: 180px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 11px; color: var(--text-2); }
   .docker-detail-btn { min-width: 42px; }
   .docker-detail { margin-top: 9px; padding-top: 8px; border-top: 1px dashed var(--border); display: grid; gap: 5px; }
@@ -742,13 +680,6 @@
       <p>请在 <code>~/.ssh/config</code> 中配置服务器，或点右上角“添加服务器”，然后刷新。</p>
       <button class="btn" type="button" id="empty-refresh">重新采集</button>
     </div>
-    <section class="hidden-servers" id="hidden-servers" hidden>
-      <div class="hidden-servers-head">
-        <h2>已隐藏的服务器 <span class="count" id="hidden-count"></span></h2>
-        <button class="btn hidden-all" type="button" id="hidden-restore-all">全部恢复</button>
-      </div>
-      <div id="hidden-list"></div>
-    </section>
   </main>
 
   <footer class="foot" id="foot"></footer>
@@ -794,6 +725,21 @@
           <h3>已隐藏的服务器</h3>
           <div id="hidden-rows"></div>
         </div>
+        <div class="target-list">
+          <h3>显示范围</h3>
+          <p class="target-empty">来自 <code>~/.ssh/config</code> 的服务器默认全部显示。选择“仅显示选中”后，只展示勾选的服务器；手动添加的服务器始终显示。</p>
+          <div class="scope-modes">
+            <label><input type="radio" name="scope-mode" value="all"> 全部显示</label>
+            <label><input type="radio" name="scope-mode" value="selected"> 仅显示选中的服务器</label>
+          </div>
+          <div id="scope-rows"></div>
+          <div class="form-actions">
+            <button type="button" class="btn primary" id="scope-save">保存显示范围</button>
+            <button type="button" class="btn" id="scope-all">全选</button>
+            <button type="button" class="btn" id="scope-none">全不选</button>
+            <span class="form-msg" id="scope-msg"></span>
+          </div>
+        </div>
       </div>
     </div>
   </div>
@@ -837,25 +783,6 @@
         <div class="actions">
           <button class="btn" id="docker-cancel" type="button">取消</button>
           <button class="btn primary" id="docker-confirm" type="button">确认</button>
-        </div>
-      </div>
-    </div>
-  </div>
-
-  <div class="modal" id="batch-modal" hidden>
-    <div class="modal-panel" style="width:min(560px,100%)" role="dialog" aria-modal="true" aria-labelledby="batch-title">
-      <div class="modal-head">
-        <h2 id="batch-title">批量删除</h2>
-        <button class="icon-btn" id="batch-close" type="button" aria-label="关闭">×</button>
-      </div>
-      <div class="modal-body">
-        <p id="batch-text" style="margin:0 0 10px;line-height:1.6"></p>
-        <div class="batch-progress"><i id="batch-progress-bar"></i></div>
-        <div class="batch-count" id="batch-count"></div>
-        <div class="batch-list" id="batch-list"></div>
-        <div class="actions">
-          <button class="btn" id="batch-cancel" type="button">取消</button>
-          <button class="btn primary" id="batch-confirm" type="button">开始删除</button>
         </div>
       </div>
     </div>
@@ -925,7 +852,6 @@
     data: null,
     error: null,
     busy: false,
-    loading: null,
     lastUpdate: 0,
     history: Object.create(null),
     accelHistory: Object.create(null),
@@ -952,7 +878,6 @@
     dockerSelected: { images: new Set(), containers: new Set() },
     dockerFocusId: null,
     dockerBatch: null,
-    batch: null,
     drawerTab: 'top',
     drawerData: null,
     drawerError: null,
@@ -989,16 +914,16 @@
     modal: document.getElementById('target-modal'),
     targetClose: document.getElementById('target-close'),
     targetForm: document.getElementById('target-form'),
-    targetTitle: document.getElementById('target-title'),
     targetSubmit: document.getElementById('target-submit'),
     targetTest: document.getElementById('target-test'),
     targetCancelEdit: document.getElementById('target-cancel-edit'),
     targetRows: document.getElementById('target-rows'),
     hiddenRows: document.getElementById('hidden-rows'),
-    hiddenServers: document.getElementById('hidden-servers'),
-    hiddenCount: document.getElementById('hidden-count'),
-    hiddenList: document.getElementById('hidden-list'),
-    hiddenRestoreAll: document.getElementById('hidden-restore-all'),
+    scopeRows: document.getElementById('scope-rows'),
+    scopeSave: document.getElementById('scope-save'),
+    scopeAll: document.getElementById('scope-all'),
+    scopeNone: document.getElementById('scope-none'),
+    scopeMsg: document.getElementById('scope-msg'),
     targetMsg: document.getElementById('target-msg'),
     authSelect: document.querySelector('#target-form select[name="auth"]'),
     authPassword: document.getElementById('auth-password'),
@@ -1017,15 +942,6 @@
     dockerConfirm: document.getElementById('docker-confirm'),
     dockerCancel: document.getElementById('docker-cancel'),
     dockerClose: document.getElementById('docker-close'),
-    batchModal: document.getElementById('batch-modal'),
-    batchTitle: document.getElementById('batch-title'),
-    batchText: document.getElementById('batch-text'),
-    batchCount: document.getElementById('batch-count'),
-    batchList: document.getElementById('batch-list'),
-    batchProgressBar: document.getElementById('batch-progress-bar'),
-    batchConfirm: document.getElementById('batch-confirm'),
-    batchCancel: document.getElementById('batch-cancel'),
-    batchClose: document.getElementById('batch-close'),
     aliasClose: document.getElementById('alias-close'),
     aliasForm: document.getElementById('alias-form'),
     aliasMsg: document.getElementById('alias-msg'),
@@ -1320,7 +1236,6 @@
     var hotAcc = !offline && !connecting && (entry.gpus || []).some(isHotCard)
     var critical = !offline && !connecting && (hotAcc || Number(entry.disk && entry.disk.percent) >= 92 || Number(entry.memory && entry.memory.percent) >= 92)
     var node = el('article', 'card' + (offline ? ' offline' : '') + (connecting ? ' connecting' : '') + (entry.kind === 'local' ? ' local' : '') + (critical ? ' critical' : '') + (paused ? ' paused' : '') + (!offline && !connecting && !paused ? ' clickable' : ''))
-    node.setAttribute('data-host-id', entry.id || '')
     if (!offline && !connecting && !paused) {
       node.title = '点击查看占用详情'
       node.addEventListener('click', function () {
@@ -1370,29 +1285,15 @@
 
     head.appendChild(body)
     var actionsWrap = el('div', 'card-actions')
-    if (entry.kind !== 'local') {
-      var hideBtn = el('button', 'card-hide')
-      hideBtn.type = 'button'
-      hideBtn.title = '隐藏这台服务器（在页面下方“已隐藏的服务器”里恢复）'
-      hideBtn.setAttribute('aria-label', '隐藏服务器')
-      hideBtn.innerHTML = HIDE_ICON
-      hideBtn.addEventListener('click', function (event) {
-        event.stopPropagation()
-        hideServer(entry)
-      })
-      actionsWrap.appendChild(hideBtn)
-    }
     actionsWrap.appendChild(monitorButton(entry))
     var editBtn = el('button', 'card-edit')
     editBtn.type = 'button'
-    var editable = Boolean(entry.manualId)
-    editBtn.title = editable ? '编辑凭据并重连' : '自定义服务器名称（IP 地址不可调整）'
-    editBtn.setAttribute('aria-label', editable ? '编辑凭据' : '自定义服务器名称')
+    editBtn.title = '自定义服务器名称（IP 地址不可调整）'
+    editBtn.setAttribute('aria-label', '自定义服务器名称')
     editBtn.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"></path><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z"></path></svg>'
     editBtn.addEventListener('click', function (event) {
       event.stopPropagation()
-      if (editable) editTargetCredentials(entry)
-      else openAliasModal(entry)
+      openAliasModal(entry)
     })
     actionsWrap.appendChild(editBtn)
     if (entry.kind !== 'local') {
@@ -1416,17 +1317,11 @@
       node.appendChild(waiting)
     } else if (offline) {
       var box = el('div', 'error-box')
-      var message = el('div', 'error-msg')
-      message.appendChild(document.createTextNode((entry.error && entry.error.message) || '离线'))
+      var message = (entry.error && entry.error.message) || '离线'
+      box.appendChild(document.createTextNode(message))
       if (entry.stale && entry.lastSuccessAt) {
-        message.appendChild(el('span', 'stale-note', '显示的是 ' + fmtRelative(entry.lastSuccessAt) + '的最后一次数据'))
+        box.appendChild(el('span', 'stale-note', '显示的是 ' + fmtRelative(entry.lastSuccessAt) + '的最后一次数据'))
       }
-      var authFailure = entry.error && (entry.error.code === 'AUTH' || entry.error.code === 'NO_CREDENTIALS')
-      if (authFailure && !entry.manualId) {
-        message.appendChild(el('span', 'stale-note', '凭据来自 ~/.ssh/config、私钥或 ssh-agent'))
-      }
-      box.appendChild(message)
-      box.appendChild(errorActions(entry))
       node.appendChild(box)
     } else {
       var cpu = entry.cpu || {}
@@ -1796,7 +1691,6 @@
     if (!data) {
       els.listWrap.hidden = true
       els.grid.hidden = false
-      renderHiddenServers([])
       if (state.error) {
         els.empty.hidden = false
       } else {
@@ -1804,8 +1698,6 @@
       }
       return
     }
-
-    renderHiddenServers(data.hiddenTargets)
 
     var entries = []
     if (data.local) entries.push(data.local)
@@ -1869,6 +1761,9 @@
     if (data.summary && data.summary.hiddenAuth > 0) {
       parts.push('已隐藏 ' + data.summary.hiddenAuth + ' 台认证失败')
     }
+    if (data.sources && data.sources.selectionMode === 'selected') {
+      parts.push('仅显示选中 ' + (data.sources.visible || 0) + ' 台')
+    }
     if (data.summary && data.summary.hiddenRemoved > 0) {
       parts.push('已移除 ' + data.summary.hiddenRemoved + ' 台')
     }
@@ -1884,7 +1779,7 @@
       footParts.push('已隐藏 ' + data.summary.hiddenAuth + ' 台认证失败（可在“添加服务器”里修改）')
     }
     if (data.summary && data.summary.hiddenRemoved > 0) {
-      footParts.push('已隐藏 ' + data.summary.hiddenRemoved + ' 台（见页面下方“已隐藏的服务器”）')
+      footParts.push('已移除 ' + data.summary.hiddenRemoved + ' 台（可在“添加服务器”里恢复）')
     }
     els.foot.textContent = footParts.join(' · ')
   }
@@ -1990,25 +1885,6 @@
     return wrap
   }
 
-  var PROC_ICONS = {
-    locate: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="6.4"></circle><path d="M12 2.6v2.8M12 18.6v2.8M2.6 12h2.8M18.6 12h2.8"></path><circle cx="12" cy="12" r="1.5" fill="currentColor" stroke="none"></circle></svg>',
-    stop: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3.2v8.4"></path><path d="M7.3 6.1a7.6 7.6 0 1 0 9.4 0"></path></svg>',
-  }
-
-  /** Compact ghost pill for a table row action; the tooltip carries the detail. */
-  function procActionButton(kind, label, title, onClick) {
-    var button = el('button', 'proc-action-btn ' + kind)
-    button.type = 'button'
-    button.title = title
-    button.setAttribute('aria-label', title)
-    button.innerHTML = (PROC_ICONS[kind] || PROC_ICONS.stop) + '<span>' + label + '</span>'
-    button.addEventListener('click', function (event) {
-      event.stopPropagation()
-      onClick()
-    })
-    return button
-  }
-
   function renderTopProcesses(data) {
     var procs = (data && data.processes) || []
     var toolbar = el('div', 'proc-toolbar')
@@ -2099,12 +1975,15 @@
       var cmdTd = el('td', 'cmd-cell mono', p.command)
       cmdTd.title = p.command
       tr.appendChild(cmdTd)
-      var actionTd = el('td', 'proc-action-cell')
-      var actions = el('div', 'proc-actions')
-      actions.appendChild(procActionButton('stop', '中止', '中止进程 ' + p.pid, function () {
+      var actionTd = document.createElement('td')
+      var abortBtn = el('button', 'btn warn proc-action-btn', '中止')
+      abortBtn.type = 'button'
+      abortBtn.title = '中止进程 ' + p.pid
+      abortBtn.addEventListener('click', function (event) {
+        event.stopPropagation()
         openKillModal(p)
-      }))
-      actionTd.appendChild(actions)
+      })
+      actionTd.appendChild(abortBtn)
       tr.appendChild(actionTd)
       tbody.appendChild(tr)
     })
@@ -2186,18 +2065,26 @@
       var containerTd = el('td', 'docker-container-cell', p.containerName || '宿主机进程')
       if (p.containerName) containerTd.title = p.containerStatus || p.containerName
       tr.appendChild(containerTd)
-      var actionTd = el('td', 'proc-action-cell')
-      var actions = el('div', 'proc-actions')
+      var actionTd = document.createElement('td')
       if (p.containerName) {
-        actions.appendChild(procActionButton('locate', '定位', '在 Docker 列表里定位容器 ' + p.containerName, function () {
+        var locateBtn = el('button', 'btn info proc-action-btn', '定位')
+        locateBtn.type = 'button'
+        locateBtn.title = '定位容器 ' + p.containerName
+        locateBtn.addEventListener('click', function (event) {
+          event.stopPropagation()
           focusDockerFromProcess(p.containerId)
-        }))
+        })
+        actionTd.appendChild(locateBtn)
       } else {
-        actions.appendChild(procActionButton('stop', '停止', '停止进程 ' + p.pid, function () {
+        var killBtn = el('button', 'btn warn proc-action-btn', '停止')
+        killBtn.type = 'button'
+        killBtn.title = '停止进程 ' + p.pid
+        killBtn.addEventListener('click', function (event) {
+          event.stopPropagation()
           openKillModal(p)
-        }))
+        })
+        actionTd.appendChild(killBtn)
       }
-      actionTd.appendChild(actions)
       tr.appendChild(actionTd)
       tbody.appendChild(tr)
     })
@@ -2394,153 +2281,30 @@
     if (label) label.textContent = '已选 ' + total + ' 个'
   }
 
-  function closeBatchModal() {
-    state.batch = null
-    els.batchModal.hidden = true
-  }
-
-  /** Open the batch dialog with the selected rows listed before anything runs. */
-  function openBatchDelete(kind) {
+  function dockerBatchDelete(kind) {
     var selected = [...state.dockerSelected[kind]]
     if (selected.length === 0) return
-    var docker = (state.drawerData && state.drawerData.docker) || {}
-    var source = kind === 'images'
-      ? (docker.images || [])
-      : [].concat(docker.running || [], docker.stopped || [])
-    var items = selected.map(function (id) {
-      var item = source.find(function (entry) { return entry.id === id })
-      return {
-        id: id,
-        label: kind === 'images'
-          ? dockerImageRef(item || {})
-          : ((item && (item.name || item.shortId)) || id),
-        status: 'pending',
-        error: '',
-      }
+    var label = kind === 'images' ? '镜像' : '容器'
+    if (!window.confirm('确认批量删除 ' + selected.length + ' 个' + label + '？此操作不可恢复。')) return
+    fetch('api/hosts/' + encodeURIComponent(state.drawerHostId) + '/docker/batch', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json', 'x-monitor-token': writeToken },
+      body: JSON.stringify({ kind: kind === 'images' ? 'image' : 'container', action: kind === 'images' ? 'rmi' : 'rm', targets: selected }),
     })
-    state.batch = { kind: kind, items: items, running: false, finished: false, stopRequested: false }
-    els.batchTitle.textContent = kind === 'images' ? '批量删除镜像' : '批量删除容器'
-    els.batchText.textContent = '将按顺序删除以下 ' + items.length + ' 个' + (kind === 'images' ? '镜像' : '容器') + '，删除后不可恢复。'
-    els.batchConfirm.textContent = '开始删除'
-    els.batchConfirm.disabled = false
-    els.batchCancel.hidden = false
-    els.batchCancel.disabled = false
-    els.batchCancel.textContent = '取消'
-    renderBatchModal()
-    els.batchModal.hidden = false
-  }
-
-  function batchStatusText(item) {
-    if (item.status === 'running') return '删除中…'
-    if (item.status === 'done') return '已删除'
-    if (item.status === 'failed') return '失败：' + (item.error || '未知原因')
-    return '等待中'
-  }
-
-  function renderBatchModal() {
-    var batch = state.batch
-    if (!batch) return
-    var done = batch.items.filter(function (item) { return item.status === 'done' || item.status === 'failed' }).length
-    var okCount = batch.items.filter(function (item) { return item.status === 'done' }).length
-    els.batchProgressBar.style.width = (batch.items.length ? Math.round((done / batch.items.length) * 100) : 0) + '%'
-    if (batch.running) {
-      els.batchCount.textContent = done + ' / ' + batch.items.length + ' · 正在删除…'
-    } else if (batch.finished) {
-      if (batch.tokenStale) {
-        els.batchCount.textContent = '已停止：页面令牌过期，请刷新面板后重试'
-      } else {
-        var failed = batch.items.length - okCount
-        els.batchCount.textContent = '完成：' + okCount + ' 成功' + (failed > 0 ? '，' + failed + ' 失败' : '') + '（共 ' + batch.items.length + ' 个）'
-      }
-    } else {
-      els.batchCount.textContent = '共 ' + batch.items.length + ' 个，尚未开始'
-    }
-    els.batchList.textContent = ''
-    batch.items.forEach(function (item) {
-      var row = el('div', 'batch-row ' + item.status)
-      var name = el('span', 'bname', item.label)
-      name.title = item.label
-      row.appendChild(name)
-      var stateCell = el('span', 'bstate', batchStatusText(item))
-      stateCell.title = stateCell.textContent
-      row.appendChild(stateCell)
-      els.batchList.appendChild(row)
-    })
-  }
-
-  /** Delete the selected rows one at a time so each result is visible. */
-  function startBatchDelete() {
-    var batch = state.batch
-    if (!batch || batch.running || batch.finished) return
-    var hostId = state.drawerHostId
-    if (!hostId) return
-    if (!writeToken) {
-      els.batchText.textContent = '页面令牌缺失，请刷新面板后重试。'
-      return
-    }
-    batch.running = true
-    batch.stopRequested = false
-    els.batchConfirm.disabled = true
-    els.batchCancel.textContent = '停止'
-    renderBatchModal()
-
-    var kind = batch.kind
-    var action = kind === 'images' ? 'rmi' : 'rm'
-    var payloadKind = kind === 'images' ? 'image' : 'container'
-
-    var step = function (index) {
-      if (batch !== state.batch) return Promise.resolve()
-      if (batch.stopRequested || index >= batch.items.length) return Promise.resolve()
-      var item = batch.items[index]
-      if (item.status !== 'pending') return step(index + 1)
-      item.status = 'running'
-      renderBatchModal()
-      return fetch('api/hosts/' + encodeURIComponent(hostId) + '/docker', {
-        method: 'POST',
-        headers: { 'content-type': 'application/json', 'x-monitor-token': writeToken },
-        body: JSON.stringify({ action: action, kind: payloadKind, target: item.id }),
-      }).then(function (response) {
-        // A page opened before a plugin hot-reload carries the previous write
-        // token; report that clearly instead of failing every row the same way.
-        if (response.status === 403) {
-          throw Object.assign(new Error('页面令牌已过期，请刷新面板后重试'), { staleToken: true })
+      .then(function (response) { return response.json() })
+      .then(function (body) {
+        var failures = (body.results || []).filter(function (item) { return !item.ok })
+        if (failures.length) {
+          var text = failures.map(function (item) {
+            var names = (item.blockingContainers || []).map(function (c) { return c.name }).join('、')
+            return item.target + '：' + item.error + (names ? '（容器：' + names + '）' : '')
+          }).join('\n')
+          window.alert('部分删除失败：\n' + text)
         }
-        return response.json().catch(function () { return {} }).then(function (body) {
-          if (!response.ok || !body || body.ok !== true) {
-            var message = (body && body.error) || ('HTTP ' + response.status)
-            var blockers = (body && body.blockingContainers) || []
-            if (blockers.length) message += '（仍在使用：' + blockers.map(function (entry) { return entry.name }).join('、') + '）'
-            throw new Error(message)
-          }
-        })
-      }).then(function () {
-        item.status = 'done'
-      }, function (error) {
-        item.status = 'failed'
-        item.error = (error && error.message) || String(error)
-        if (error && error.staleToken) {
-          batch.tokenStale = true
-          batch.stopRequested = true
-          els.batchText.textContent = '页面令牌已过期（插件热更新会更换令牌），请刷新面板后重试。'
-        }
-      }).then(function () {
-        renderBatchModal()
-        return step(index + 1)
+        state.dockerSelected[kind] = new Set()
+        loadDrawerDetails(true)
       })
-    }
-
-    step(0).then(function () {
-      if (batch !== state.batch) return
-      batch.running = false
-      batch.finished = true
-      state.dockerSelected[kind] = new Set()
-      updateDockerBatchBar()
-      els.batchCancel.hidden = true
-      els.batchConfirm.textContent = '关闭'
-      els.batchConfirm.disabled = false
-      renderBatchModal()
-      loadDrawerDetails(true)
-    })
+      .catch(function (error) { window.alert('批量删除失败：' + (error.message || error)) })
   }
 
   function focusDockerFromProcess(id) {
@@ -2581,10 +2345,10 @@
     bar.appendChild(el('span', '', '已选 0 个')).setAttribute('data-count', '')
     var batchImages = el('button', 'btn danger docker-action-btn', '批量删除镜像')
     batchImages.type = 'button'
-    batchImages.addEventListener('click', function () { openBatchDelete('images') })
+    batchImages.addEventListener('click', function () { dockerBatchDelete('images') })
     var batchContainers = el('button', 'btn danger docker-action-btn', '批量删除容器')
     batchContainers.type = 'button'
-    batchContainers.addEventListener('click', function () { openBatchDelete('containers') })
+    batchContainers.addEventListener('click', function () { dockerBatchDelete('containers') })
     bar.appendChild(batchImages)
     bar.appendChild(batchContainers)
     els.drawerBody.appendChild(bar)
@@ -2934,9 +2698,7 @@
   function hiddenRow(entry) {
     var row = el('div', 'target-row')
     var who = el('div', 'who')
-    var label = el('b', '', entry.host)
-    label.title = entry.host + ':' + entry.port
-    who.appendChild(label)
+    who.appendChild(el('b', '', entry.host + ':' + entry.port))
     who.appendChild(document.createTextNode(' 已从监控列表移除'))
     row.appendChild(who)
     var restore = el('button', 'restore', '恢复')
@@ -2949,7 +2711,7 @@
         return response.json().then(function (body) { return { response: response, body: body } })
       }).then(function (result) {
         if (!result.response.ok || !result.body.ok) throw new Error(result.body.error || '恢复失败')
-        setTargetMsg('已恢复 ' + entry.host, 'ok')
+        setTargetMsg('已恢复 ' + entry.host + ':' + entry.port, 'ok')
         loadHiddenList()
         load(true)
       }).catch(function (error) {
@@ -2984,275 +2746,92 @@
       })
   }
 
-  var HIDE_ICON = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3l18 18"></path><path d="M10.6 6.2A9.9 9.9 0 0 1 12 6.1c4.4 0 8 2.9 9.9 5.9a17 17 0 0 1-3.6 4"></path><path d="M6.2 6.9A17.4 17.4 0 0 0 2.1 12c1.9 3 5.5 5.9 9.9 5.9 1.4 0 2.7-.3 3.9-.8"></path><path d="M9.9 9.9a3 3 0 0 0 4.2 4.2"></path></svg>'
+  var scopeState = { mode: 'all', keys: [], candidates: [] }
 
-  /** Hide one server from the board; it stays restorable below. */
-  function hideServer(entry) {
-    if (!writeToken) {
-      showBanner('页面令牌缺失，请刷新页面后重试')
+  function scopeMode() {
+    var checked = document.querySelector('input[name="scope-mode"]:checked')
+    return checked && checked.value === 'selected' ? 'selected' : 'all'
+  }
+
+  function setScopeMode(mode) {
+    var radios = document.querySelectorAll('input[name="scope-mode"]')
+    for (var i = 0; i < radios.length; i += 1) radios[i].checked = radios[i].value === mode
+  }
+
+  function renderScope() {
+    els.scopeRows.textContent = ''
+    if (scopeState.candidates.length === 0) {
+      els.scopeRows.appendChild(el('div', 'target-empty', '没有可选的服务器（~/.ssh/config 里没有发现主机）。'))
       return
     }
-    fetch('api/hidden', {
-      method: 'POST',
-      headers: { 'content-type': 'application/json', 'x-monitor-token': writeToken },
-      body: JSON.stringify({ host: entry.host, port: entry.port }),
-    }).then(function (response) {
-      return response.json().then(function (body) { return { response: response, body: body } })
-    }).then(function (result) {
-      if (!result.response.ok || !result.body.ok) throw new Error(result.body.error || '隐藏失败')
-      return load(true).then(function () {
-        showBanner('已隐藏：' + (entry.name || entry.host) + '（可在页面下方“已隐藏的服务器”恢复）', 'ok', 3000)
+    scopeState.candidates.forEach(function (candidate) {
+      var row = el('label', 'scope-row')
+      var box = document.createElement('input')
+      box.type = 'checkbox'
+      box.value = candidate.key
+      box.checked = scopeState.keys.indexOf(candidate.key) >= 0
+      box.addEventListener('change', function () {
+        var index = scopeState.keys.indexOf(candidate.key)
+        if (box.checked && index < 0) scopeState.keys.push(candidate.key)
+        if (!box.checked && index >= 0) scopeState.keys.splice(index, 1)
       })
-    }).catch(function (error) {
-      showBanner('隐藏失败：' + ((error && error.message) || String(error)))
+      row.appendChild(box)
+      var who = el('div', 'who')
+      who.appendChild(el('b', '', candidate.name || candidate.host))
+      who.appendChild(document.createTextNode(' ' + (candidate.username || '') + '@' + candidate.host + ':' + candidate.port))
+      row.appendChild(who)
+      row.appendChild(el('span', 'tag', candidate.source === 'ssh-config' ? 'SSH 配置' : 'SSH 配置'))
+      els.scopeRows.appendChild(row)
     })
   }
 
-  /** Undo one hide entry. */
-  function restoreHidden(item, button) {
-    if (!writeToken) {
-      showBanner('页面令牌缺失，请刷新页面后重试')
-      return
-    }
-    button.disabled = true
-    fetch('api/hidden/' + encodeURIComponent(item.key), {
-      method: 'DELETE',
-      headers: { 'x-monitor-token': writeToken },
-    }).then(function (response) {
-      return response.json().then(function (body) { return { response: response, body: body } })
-    }).then(function (result) {
-      if (!result.response.ok || !result.body.ok) throw new Error(result.body.error || '恢复失败')
-      return load(true).then(function () {
-        showBanner('已恢复：' + item.host, 'ok', 3000)
-      })
-    }).catch(function (error) {
-      button.disabled = false
-      showBanner('恢复失败：' + ((error && error.message) || String(error)))
-    })
-  }
-
-  function restoreAllHidden() {
-    var list = ((state.data && state.data.hiddenTargets) || []).slice()
-    if (list.length === 0) return
-    if (!writeToken) {
-      showBanner('页面令牌缺失，请刷新页面后重试')
-      return
-    }
-    els.hiddenRestoreAll.disabled = true
-    var chain = Promise.resolve()
-    var failed = 0
-    list.forEach(function (item) {
-      chain = chain.then(function () {
-        return fetch('api/hidden/' + encodeURIComponent(item.key), {
-          method: 'DELETE',
-          headers: { 'x-monitor-token': writeToken },
-        }).then(function (response) {
-          if (!response.ok) failed += 1
-        }).catch(function () { failed += 1 })
-      })
-    })
-    chain.then(function () {
-      els.hiddenRestoreAll.disabled = false
-      return load(true)
-    }).then(function () {
-      showBanner(failed === 0 ? '已恢复全部隐藏的服务器' : ('恢复完成，' + failed + ' 个失败'), failed === 0 ? 'ok' : undefined, failed === 0 ? 3000 : 0)
-    })
-  }
-
-  /** Render the restorable hidden-server list under the board. */
-  function renderHiddenServers(hiddenTargets) {
-    var list = Array.isArray(hiddenTargets) ? hiddenTargets : []
-    els.hiddenServers.hidden = list.length === 0
-    if (list.length === 0) return
-    els.hiddenCount.textContent = '（' + list.length + '）'
-    els.hiddenList.textContent = ''
-    list.forEach(function (item) {
-      var port = Number(item.port) || 22
-      var row = el('div', 'hidden-row')
-      var grow = el('div', 'grow')
-      var name = el('span', 'hname', item.host)
-      name.title = item.host + ':' + port
-      grow.appendChild(name)
-      row.appendChild(grow)
-      var restore = el('button', 'restore', '恢复')
-      restore.type = 'button'
-      restore.title = '恢复 ' + item.host + ':' + port
-      restore.addEventListener('click', function () { restoreHidden(item, restore) })
-      row.appendChild(restore)
-      els.hiddenList.appendChild(row)
-    })
-  }
-
-  /** Actions shown inside an offline card: retry the connection, fix credentials. */
-  function errorActions(entry) {
-    var wrap = el('div', 'error-actions')
-    var retry = el('button', 'error-retry', '重连')
-    retry.type = 'button'
-    retry.title = '断开旧连接并立即重新采集这台服务器'
-    retry.addEventListener('click', function (event) {
-      event.stopPropagation()
-      reconnectHost(entry, retry)
-    })
-    wrap.appendChild(retry)
-    if (entry.kind !== 'local') {
-      var fix = el('button', 'error-edit-btn', entry.manualId ? '编辑凭据' : '设置凭据')
-      fix.type = 'button'
-      fix.title = entry.manualId
-        ? '修改用户名、密码或私钥后自动重连'
-        : '输入密码或私钥：保存后作为这台主机的手动凭据（覆盖 ~/.ssh/config）并自动重连'
-      fix.addEventListener('click', function (event) {
-        event.stopPropagation()
-        editTargetCredentials(entry)
-      })
-      wrap.appendChild(fix)
-    }
-    return wrap
-  }
-
-  /** The current snapshot entry for one host/port, or null. */
-  function findRemote(host, port) {
-    var list = (state.data && state.data.remotes) || []
-    var wantedHost = String(host || '').toLowerCase()
-    var wantedPort = Number(port) || 22
-    for (var i = 0; i < list.length; i += 1) {
-      if (String(list[i].host || '').toLowerCase() === wantedHost && (Number(list[i].port) || 22) === wantedPort) return list[i]
-    }
-    return null
-  }
-
-  /** "Ubuntu 22.04 · 32 核" for confirmation messages. */
-  function describeHost(view) {
-    if (!view) return ''
-    return [view.osName, view.cpu && view.cpu.cores ? view.cpu.cores + ' 核' : ''].filter(Boolean).join(' · ')
-  }
-
-  /**
-   * Wait until a host's card leaves the "collecting" state, then hand it to
-   * `done`. A first SSH connect can exceed one poll window, so a card that is
-   * still `connecting` must never be reported as a failure.
-   */
-  function watchRemote(host, port, attempt, done) {
-    var view = findRemote(host, port)
-    if (view !== null && view.status === 'connecting' && attempt < 6) {
-      window.setTimeout(function () {
-        load(true).then(function () { watchRemote(host, port, attempt + 1, done) })
-      }, 1500)
-      return
-    }
-    done(view)
-  }
-
-  /** Scroll to a card and flash it so a just-saved server is easy to spot. */
-  function focusCard(hostId) {
-    if (!hostId) return
-    var node = document.querySelector('[data-host-id="' + String(hostId).replace(/"/g, '\\"') + '"]')
-    if (node === null) return
-    try {
-      // 'nearest' keeps the success banner in view: it only scrolls when the
-      // card is actually off-screen.
-      node.scrollIntoView({ behavior: 'smooth', block: 'nearest' })
-    } catch (error) {
-      node.scrollIntoView()
-    }
-    node.classList.add('flash')
-    window.setTimeout(function () { node.classList.remove('flash') }, 2800)
-  }
-
-  /**
-   * Leave the dialog after a successful save: the user asked for the board, not
-   * a confirmation stuck inside a modal, so the outcome moves to the banner.
-   */
-  function finishSave(view, cardId) {
-    var pending = Boolean(view && view.status === 'connecting')
-    var name = (view && (view.name || view.host)) || ''
-    closeTargets()
-    if (pending) {
-      showBanner('已保存：' + name + '，正在连接并采集指标…', 'ok')
-    } else {
-      var detail = describeHost(view)
-      showBanner('连接成功：' + name + (detail ? '（' + detail + '）' : '') + '，正在采集指标', 'ok')
-    }
-    focusCard(cardId)
-  }
-
-  /** Force one host to be collected again, bypassing any pooled SSH connection. */
-  function reconnectHost(entry, button) {
-    if (!writeToken) {
-      showBanner('页面令牌缺失，请刷新页面后重试')
-      return
-    }
-    var label = button.textContent
-    button.disabled = true
-    button.textContent = '重连中…'
-    fetch('api/hosts/' + encodeURIComponent(entry.id) + '/reconnect', {
-      method: 'POST',
-      headers: { 'x-monitor-token': writeToken },
-    }).then(function (response) {
-      return response.json().then(function (body) { return { response: response, body: body } })
-    }).then(function (result) {
-      if (!result.response.ok || !result.body.ok) throw new Error(result.body.error || '重连失败')
-      // Paint the fresh view right away: a failed retry still needs no banner,
-      // because the card itself carries the real SSH error message.
-      var host = result.body.host
-      if (state.data && host && host.id) {
-        state.data.remotes = (state.data.remotes || []).map(function (item) {
-          return item.id === host.id ? host : item
-        })
-        render()
-      }
-      load(true).then(function () {
-        watchRemote(entry.host, entry.port, 0, function (view) {
-          var finalView = view || host
-          if (finalView && finalView.status === 'connecting') {
-            showBanner('重连中，指标稍后会自动刷新…')
-            return
-          }
-          if (finalView && finalView.status === 'online') {
-            showBanner('重连成功：' + (finalView.name || finalView.host) + (describeHost(finalView) ? '（' + describeHost(finalView) + '）' : ''), 'ok', 3000)
-            return
-          }
-          showBanner('仍然无法连接：' + ((finalView && finalView.error && finalView.error.message) || '未知原因'))
-        })
-      })
-    }).catch(function (error) {
-      showBanner('重连失败：' + ((error && error.message) || String(error)))
-    }).finally(function () {
-      button.disabled = false
-      button.textContent = label
-    })
-  }
-
-  /** Open the credential dialog for any server card (manual target or ssh-config host). */
-  function editTargetCredentials(entry) {
-    openTargets()
-    if (!entry.manualId) {
-      // Discovered from ~/.ssh/config: the address stays, the credentials become
-      // a manual target that wins over the config entry for the same host:port.
-      startEditTarget(entry, null)
-      return
-    }
-    setTargetMsg('正在读取服务器设置…', '')
-    fetch('api/targets', { cache: 'no-store', headers: { accept: 'application/json' } })
+  function loadSelection() {
+    fetch('api/selection', { cache: 'no-store', headers: { accept: 'application/json' } })
       .then(function (response) {
-        if (!response.ok) throw new Error('读取服务器列表失败')
+        if (!response.ok) throw new Error('HTTP ' + response.status)
         return response.json()
       })
-      .then(function (payload) {
-        var record = (payload.targets || []).filter(function (target) {
-          return target.id === entry.manualId
-        })[0]
-        startEditTarget(record || {
-          id: entry.manualId,
-          name: entry.name,
-          host: entry.host,
-          port: entry.port,
-          username: entry.username,
-          auth: 'password',
-        })
+      .then(function (body) {
+        if (!body || body.ok !== true) throw new Error((body && body.error) || '加载失败')
+        scopeState.mode = body.selection && body.selection.mode === 'selected' ? 'selected' : 'all'
+        scopeState.keys = body.selection && Array.isArray(body.selection.keys) ? body.selection.keys.slice() : []
+        scopeState.candidates = Array.isArray(body.candidates) ? body.candidates : []
+        setScopeMode(scopeState.mode)
+        renderScope()
       })
       .catch(function (error) {
-        setTargetMsg((error && error.message) || String(error), 'error')
+        els.scopeRows.textContent = '加载失败：' + ((error && error.message) || String(error))
       })
+  }
+
+  function saveScope() {
+    if (!writeToken) {
+      els.scopeMsg.textContent = '页面令牌缺失，请刷新页面后重试'
+      els.scopeMsg.className = 'form-msg error'
+      return
+    }
+    var keys = []
+    var boxes = els.scopeRows.querySelectorAll('input[type="checkbox"]')
+    for (var i = 0; i < boxes.length; i += 1) if (boxes[i].checked) keys.push(boxes[i].value)
+    els.scopeMsg.textContent = '保存中…'
+    els.scopeMsg.className = 'form-msg'
+    fetch('api/selection', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json', 'x-monitor-token': writeToken },
+      body: JSON.stringify({ mode: scopeMode(), keys: keys }),
+    }).then(function (response) {
+      return response.json().then(function (body) { return { response: response, body: body } })
+    }).then(function (result) {
+      if (!result.response.ok || !result.body.ok) throw new Error(result.body.error || '保存失败')
+      scopeState.mode = result.body.selection.mode
+      scopeState.keys = result.body.selection.keys
+      els.scopeMsg.textContent = scopeState.mode === 'selected' ? '已保存：只显示选中的服务器' : '已保存：显示全部服务器'
+      els.scopeMsg.className = 'form-msg ok'
+      load(true)
+    }).catch(function (error) {
+      els.scopeMsg.textContent = (error && error.message) || String(error)
+      els.scopeMsg.className = 'form-msg error'
+    })
   }
 
   /** Card trash button: manual targets are deleted, discovered ones are hidden. */
@@ -3291,38 +2870,24 @@
     })
   }
 
-  /**
-   * Prefill the target dialog for an existing server.
-   *
-   * `manualId` is the record to update. Pass `null` to store a *new* manual
-   * credential set for an ssh-config host: the same address wins over the
-   * discovered entry, so the next collection uses the credentials just entered.
-   */
-  function startEditTarget(entry, manualId) {
-    state.editingTargetId = manualId === undefined ? (entry.id || null) : manualId
+  function startEditTarget(entry) {
+    state.editingTargetId = entry.id
     var form = els.targetForm
     form.elements.name.value = entry.name || ''
     form.elements.host.value = entry.host || ''
-    form.elements.host.disabled = false
+    form.elements.host.disabled = true
     form.elements.port.value = String(entry.port || 22)
-    form.elements.port.disabled = false
+    form.elements.port.disabled = true
     form.elements.username.value = entry.username || ''
     form.elements.auth.value = entry.auth === 'key' ? 'key' : 'password'
     form.elements.password.value = ''
-    form.elements.password.placeholder = state.editingTargetId ? '留空则保持原密码不变' : 'SSH 登录密码'
+    form.elements.password.placeholder = '留空则保持原密码不变'
     form.elements.privateKey.value = ''
     form.elements.passphrase.value = ''
     syncAuthFields()
-    els.targetTitle.textContent = state.editingTargetId ? '编辑服务器凭据' : '设置服务器凭据'
-    els.targetSubmit.textContent = state.editingTargetId ? '更新凭证' : '保存凭据'
+    els.targetSubmit.textContent = '更新凭证'
     els.targetCancelEdit.hidden = false
-    var label = entry.name || entry.host
-    setTargetMsg(
-      state.editingTargetId
-        ? '正在编辑 ' + label + '：地址、端口与凭据都可以修改'
-        : '为 ' + label + ' 保存手动凭据，保存后自动重连并覆盖 ~/.ssh/config 里的同名主机',
-      '',
-    )
+    setTargetMsg('正在编辑 ' + (entry.name || entry.host) + '（地址与端口不可调整）', '')
   }
 
   function resetTargetEdit() {
@@ -3334,7 +2899,6 @@
     form.elements.port.value = '22'
     form.elements.password.placeholder = 'SSH 登录密码'
     syncAuthFields()
-    els.targetTitle.textContent = '添加服务器'
     els.targetSubmit.textContent = '保存并开始采集'
     els.targetCancelEdit.hidden = true
     setTargetMsg('', '')
@@ -3391,6 +2955,7 @@
     document.body.style.overflow = 'hidden'
     loadTargetList()
     loadHiddenList()
+    loadSelection()
     var host = els.targetForm.elements.host
     if (host) window.setTimeout(function () { host.focus() }, 30)
   }
@@ -3422,31 +2987,10 @@
       return response.json().then(function (payload) { return { response: response, payload: payload } })
     }).then(function (result) {
       if (!result.response.ok || !result.payload.ok) throw new Error(result.payload.error || '保存失败')
-      var savedId = result.payload.target && result.payload.target.id ? 'manual:' + result.payload.target.id : ''
       resetTargetEdit()
       setTargetMsg(isEdit ? '已更新，正在重新采集…' : '已添加，正在建立 SSH 连接…', 'ok')
-      // A freshly added server must be visible even when the page is scoped to
-      // the current workspace, otherwise the dialog would close onto a filtered
-      // board and the new card would seem to have vanished.
-      if (!isEdit && isWorkspaceScope && !state.wsShowAll) state.wsShowAll = true
       loadTargetList()
-      return load(true).then(function () {
-        watchRemote(body.host, body.port, 0, function (view) {
-          if (view === null) {
-            setTargetMsg('已保存，等待下一次采集…', '')
-            return
-          }
-          if (view.status === 'connecting') {
-            finishSave(view, savedId)
-            return
-          }
-          if (view.status === 'online') {
-            finishSave(view, savedId)
-            return
-          }
-          setTargetMsg('已保存，但连接失败：' + ((view.error && view.error.message) || '未知原因'), 'error')
-        })
-      })
+      load(true)
     }).catch(function (error) {
       setTargetMsg((error && error.message) || String(error), 'error')
     }).finally(function () {
@@ -3454,29 +2998,14 @@
     })
   }
 
-  var bannerTimer = null
-
-  /** Show a banner; `autoHideMs` turns it into a short-lived confirmation. */
-  function showBanner(message, tone, autoHideMs) {
-    if (bannerTimer !== null) {
-      window.clearTimeout(bannerTimer)
-      bannerTimer = null
-    }
+  function showBanner(message) {
     if (!message) {
       els.banner.hidden = true
       els.banner.textContent = ''
-      els.banner.classList.remove('ok')
       return
     }
     els.banner.hidden = false
     els.banner.textContent = message
-    els.banner.classList.toggle('ok', tone === 'ok')
-    if (autoHideMs > 0) {
-      bannerTimer = window.setTimeout(function () {
-        bannerTimer = null
-        showBanner(null)
-      }, autoHideMs)
-    }
   }
 
   function setBusy(busy) {
@@ -3492,16 +3021,15 @@
     state.timer = window.setTimeout(function () { load(false) }, delay)
   }
 
-  /** Reload the snapshot. Returns a promise so callers can report the outcome. */
   function load(force) {
-    if (state.busy) return state.loading || Promise.resolve()
+    if (state.busy) return
     setBusy(true)
     var url = 'api/snapshot'
     var params = []
     if (force) params.push('force=1')
     if (isWorkspaceScope && !state.wsShowAll && state.wsBoundHost) params.push('host=' + encodeURIComponent(state.wsBoundHost))
     if (params.length > 0) url += '?' + params.join('&')
-    state.loading = fetch(url, { cache: 'no-store', headers: { accept: 'application/json' } })
+    fetch(url, { cache: 'no-store', headers: { accept: 'application/json' } })
       .then(function (response) {
         if (!response.ok) throw new Error('采集服务返回 HTTP ' + response.status)
         return response.json()
@@ -3533,7 +3061,6 @@
           schedule()
         }
       })
-    return state.loading
   }
 
   function tick() {
@@ -3659,7 +3186,20 @@
 
   els.addTarget.addEventListener('click', openTargets)
   els.targetClose.addEventListener('click', closeTargets)
-  els.hiddenRestoreAll.addEventListener('click', restoreAllHidden)
+  els.scopeSave.addEventListener('click', saveScope)
+  els.scopeAll.addEventListener('click', function () {
+    var boxes = els.scopeRows.querySelectorAll('input[type="checkbox"]')
+    scopeState.keys = []
+    for (var i = 0; i < boxes.length; i += 1) {
+      boxes[i].checked = true
+      scopeState.keys.push(boxes[i].value)
+    }
+  })
+  els.scopeNone.addEventListener('click', function () {
+    var boxes = els.scopeRows.querySelectorAll('input[type="checkbox"]')
+    scopeState.keys = []
+    for (var i = 0; i < boxes.length; i += 1) boxes[i].checked = false
+  })
   function openDockerAction(kind, action, item) {
     var name = kind === 'image'
       ? ((item.repository || '<none>') + ':' + (item.tag || '<none>'))
@@ -3734,33 +3274,6 @@
   els.dockerClose.addEventListener('click', closeDockerModal)
   els.dockerModal.addEventListener('click', function (event) {
     if (event.target === els.dockerModal) closeDockerModal()
-  })
-
-  els.batchConfirm.addEventListener('click', function () {
-    var batch = state.batch
-    if (!batch) return
-    if (batch.finished) {
-      closeBatchModal()
-      return
-    }
-    startBatchDelete()
-  })
-  els.batchCancel.addEventListener('click', function () {
-    var batch = state.batch
-    if (batch && batch.running) {
-      batch.stopRequested = true
-      els.batchCancel.disabled = true
-      els.batchCancel.textContent = '正在停止…'
-      return
-    }
-    closeBatchModal()
-  })
-  els.batchClose.addEventListener('click', function () {
-    if (state.batch && state.batch.running) return
-    closeBatchModal()
-  })
-  els.batchModal.addEventListener('click', function (event) {
-    if (event.target === els.batchModal && !(state.batch && state.batch.running)) closeBatchModal()
   })
 
   function openKillModal(process) {
