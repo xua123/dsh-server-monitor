@@ -81,8 +81,8 @@
       },
       "versions": [
         {
-          "version": "0.2.3",
-          "publishTimestamp": 1795404552,
+          "version": "0.2.4",
+          "publishTimestamp": 1795405314,
           "source": {
             "type": "npm"
           },
