@@ -38,10 +38,10 @@ https://github.com/xua123/dsh-server-monitor
 ### GitHub Release tarball
 
 ```text
-https://github.com/xua123/dsh-server-monitor/releases/download/v0.2.6/dsh-server-monitor-0.2.6.tgz
+https://github.com/xua123/dsh-server-monitor/releases/download/v0.2.7/dsh-server-monitor-0.2.7.tgz
 ```
 
-The URL is pinned to `v0.2.6`, so the asset name can safely contain the version.
+The URL is pinned to `v0.2.7`, so the asset name can safely contain the version.
 
 Requirements: DSH `>= 0.2.1-rc.1`, Node `>= 20`.
 

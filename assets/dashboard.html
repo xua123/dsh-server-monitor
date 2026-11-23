@@ -536,6 +536,7 @@
   .docker-left { display: flex; align-items: center; gap: 8px; flex: 1; min-width: 0; }
   .docker-left input[type="checkbox"] { flex: none; accent-color: var(--accent); }
   .batch-progress { height: 5px; margin-top: 12px; overflow: hidden; border-radius: 999px; background: var(--bg-soft); }
+  .batch-progress-text { min-height: 16px; margin-top: 5px; color: var(--muted); font-size: 10.5px; }
   .batch-progress > div { width: 0; height: 100%; border-radius: inherit; background: var(--accent); transition: width .2s ease; }
   .batch-progress.active > div { animation: batch-progress 1.1s ease-in-out infinite; }
   @keyframes batch-progress { 0% { width: 10%; } 50% { width: 75%; } 100% { width: 95%; } }
@@ -798,6 +799,7 @@
         <p id="batch-text" style="margin:0 0 8px;line-height:1.6"></p>
         <ul class="batch-list" id="batch-list"></ul>
         <div class="batch-progress" id="batch-progress" hidden><div id="batch-progress-bar"></div></div>
+        <div class="batch-progress-text" id="batch-progress-text"></div>
         <p id="batch-error" style="margin:8px 0 0;color:var(--bad);font-size:12px;line-height:1.5;white-space:pre-wrap" hidden></p>
         <div class="actions">
           <button class="btn" id="batch-cancel" type="button">取消</button>
@@ -961,6 +963,7 @@
     batchError: document.getElementById('batch-error'),
     batchProgress: document.getElementById('batch-progress'),
     batchProgressBar: document.getElementById('batch-progress-bar'),
+    batchProgressText: document.getElementById('batch-progress-text'),
     batchConfirm: document.getElementById('batch-confirm'),
     batchCancel: document.getElementById('batch-cancel'),
     batchClose: document.getElementById('batch-close'),
@@ -2321,6 +2324,7 @@
     var ids = [...state.dockerSelected[kind]]
     if (ids.length < 2) return
     var items = batchItems(kind, ids)
+    if (state.batchPollTimer) window.clearTimeout(state.batchPollTimer)
     state.dockerBatch = { kind, targets: ids, items }
     var label = kind === 'images' ? '镜像' : '容器'
     els.batchTitle.textContent = '删除选中的 ' + ids.length + ' 个' + label
@@ -2345,10 +2349,71 @@
   }
 
   function closeDockerBatch() {
+    if (state.batchPollTimer) window.clearTimeout(state.batchPollTimer)
+    state.batchPollTimer = 0
     state.dockerBatch = null
     els.batchModal.hidden = true
     els.batchProgress.hidden = true
     els.batchProgress.classList.remove('active')
+  }
+
+  function applyBatchResults(batch, results) {
+    var failures = results.filter(function (item) { return !item.ok })
+    var failedTargets = failures.map(function (item) { return item.target })
+    var succeeded = batch.targets.filter(function (id) { return failedTargets.indexOf(id) < 0 })
+    succeeded.forEach(function (id) { state.dockerSelected[batch.kind].delete(id) })
+    if (failures.length === 0) {
+      state.dockerSelected[batch.kind] = new Set()
+      window.setTimeout(closeDockerBatch, 350)
+      showBanner('已删除选中的' + (batch.kind === 'images' ? '镜像' : '容器'))
+      loadDrawerDetails(true)
+      return
+    }
+    var lines = failures.map(function (item) {
+      var names = (item.blockingContainers || []).map(function (c) { return c.name }).join('、')
+      return item.target + '：' + item.error + (names ? '（仍在使用：' + names + '）' : '')
+    })
+    els.batchError.hidden = false
+    els.batchError.textContent = '部分删除失败：\n' + lines.join('\n')
+    els.batchConfirm.disabled = false
+    els.batchConfirm.textContent = '重试删除'
+    loadDrawerDetails(true)
+  }
+
+  function pollDockerBatch(jobId, batch) {
+    fetch('api/hosts/' + encodeURIComponent(state.drawerHostId) + '/docker/batch/' + encodeURIComponent(jobId), {
+      cache: 'no-store',
+      headers: { accept: 'application/json' },
+    }).then(function (response) {
+      return response.json().then(function (body) { return { ok: response.ok, body: body } })
+    }).then(function (result) {
+      if (!result.ok || !result.body || result.body.ok !== true) {
+        throw new Error((result.body && result.body.error) || '读取批量进度失败')
+      }
+      var job = result.body
+      var done = job.status === 'done'
+      var total = Math.max(1, Number(job.total) || batch.targets.length)
+      var successes = Math.max(0, Math.min(total, Number(job.successes) || 0))
+      els.batchProgress.hidden = false
+      els.batchProgress.classList.toggle('active', !done)
+      els.batchProgressBar.style.width = Math.round(successes / total * 100) + '%'
+      els.batchProgressText.textContent = successes + '/' + total + (done ? ' 完成' : ' 已删除')
+      if (job.status === 'done') {
+        els.batchConfirm.disabled = false
+        applyBatchResults(batch, job.results || [])
+        return
+      }
+      if (job.status === 'error') {
+        throw new Error(job.error || '批量删除失败')
+      }
+      state.batchPollTimer = window.setTimeout(function () { pollDockerBatch(jobId, batch) }, 500)
+    }).catch(function (error) {
+      els.batchProgress.classList.remove('active')
+      els.batchConfirm.disabled = false
+      els.batchConfirm.textContent = '重试删除'
+      els.batchError.hidden = false
+      els.batchError.textContent = (error && error.message) || String(error)
+    })
   }
 
   function confirmDockerBatch() {
@@ -2359,61 +2424,30 @@
     els.batchError.hidden = true
     els.batchProgress.hidden = false
     els.batchProgress.classList.add('active')
-    els.batchProgressBar.style.width = '5%'
-    var controller = new AbortController()
-    var timer = window.setTimeout(function () { controller.abort() }, 120000)
+    els.batchProgressBar.style.width = '0'
+    els.batchProgressText.textContent = '0/' + batch.targets.length + ' 已删除'
     fetch('api/hosts/' + encodeURIComponent(state.drawerHostId) + '/docker/batch', {
       method: 'POST',
-      signal: controller.signal,
       headers: { 'content-type': 'application/json', 'x-monitor-token': writeToken },
       body: JSON.stringify({
+        async: true,
         kind: batch.kind === 'images' ? 'image' : 'container',
         action: batch.kind === 'images' ? 'rmi' : 'rm',
         targets: batch.targets,
       }),
     }).then(function (response) {
-      window.clearTimeout(timer)
       return response.json().then(function (body) { return { ok: response.ok, body: body } })
     }).then(function (result) {
-      els.batchProgress.classList.remove('active')
-      els.batchProgressBar.style.width = '100%'
-      if (!result.body || result.body.ok === undefined && !result.body.results) {
-        throw new Error((result.body && result.body.error) || '批量删除失败')
+      if (!result.ok || !result.body || result.body.ok !== true || !result.body.jobId) {
+        throw new Error((result.body && result.body.error) || '批量删除启动失败')
       }
-      var results = result.body.results || []
-      var failures = results.filter(function (item) { return !item.ok })
-      var failedTargets = failures.map(function (item) { return item.target })
-      var succeeded = batch.targets.filter(function (id) { return failedTargets.indexOf(id) < 0 })
-      succeeded.forEach(function (id) { state.dockerSelected[batch.kind].delete(id) })
-      if (failures.length === 0) {
-        state.dockerSelected[batch.kind] = new Set()
-        window.setTimeout(closeDockerBatch, 350)
-        showBanner('已删除选中的' + (batch.kind === 'images' ? '镜像' : '容器'))
-        loadDrawerDetails(true)
-        return
-      }
-      var lines = failures.map(function (item) {
-        var names = (item.blockingContainers || []).map(function (c) { return c.name }).join('、')
-        return item.target + '：' + item.error + (names ? '（仍在使用：' + names + '）' : '')
-      })
-      els.batchError.hidden = false
-      els.batchError.textContent = '部分删除失败：\n' + lines.join('\n')
-      batch.targets = failedTargets
-      batch.items = batch.items.filter(function (item) { return failedTargets.indexOf(item.id) >= 0 })
-      els.batchConfirm.disabled = false
-      els.batchConfirm.textContent = '重试删除'
-      loadDrawerDetails(true)
+      pollDockerBatch(result.body.jobId, batch)
     }).catch(function (error) {
-      window.clearTimeout(timer)
-      els.batchProgress.hidden = true
       els.batchProgress.classList.remove('active')
-      els.batchError.hidden = false
-      var message = error && error.name === 'AbortError'
-        ? '批量删除超时（120 秒），请稍后刷新查看结果'
-        : ((error && error.message) || String(error))
-      els.batchError.textContent = message
       els.batchConfirm.disabled = false
       els.batchConfirm.textContent = '重试删除'
+      els.batchError.hidden = false
+      els.batchError.textContent = (error && error.message) || String(error)
     })
   }
 
