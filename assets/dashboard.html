@@ -2288,8 +2288,12 @@
 
   function dockerDependents(docker, image) {
     var ref = dockerImageRef(image).toLowerCase()
+    var imageId = String(image.id || '').toLowerCase().replace(/^sha256:/, '')
     return [...(docker.running || []), ...(docker.stopped || [])].filter(function (container) {
-      return container.imageId === image.id || String(container.image || '').toLowerCase() === ref
+      var containerId = String(container.imageId || '').toLowerCase().replace(/^sha256:/, '')
+      if (containerId !== '' && imageId !== '' && (containerId === imageId || containerId.indexOf(imageId) === 0 || imageId.indexOf(containerId) === 0)) return true
+      var containerRef = String(container.image || '').toLowerCase().replace(/^sha256:/, '')
+      return containerRef === ref || (containerRef !== '' && imageId !== '' && (containerRef === imageId || containerRef.indexOf(imageId) === 0 || imageId.indexOf(containerRef) === 0))
     })
   }
 
