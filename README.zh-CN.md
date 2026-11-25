@@ -39,10 +39,10 @@ https://github.com/xua123/dsh-server-monitor
 ### GitHub Release tarball
 
 ```text
-https://github.com/xua123/dsh-server-monitor/releases/download/v0.2.8/dsh-server-monitor-0.2.8.tgz
+https://github.com/xua123/dsh-server-monitor/releases/download/v0.2.9/dsh-server-monitor-0.2.9.tgz
 ```
 
-链接固定到 `v0.2.8`，因此文件名可以安全地包含版本号。
+链接固定到 `v0.2.9`，因此文件名可以安全地包含版本号。
 
 要求：DSH `>= 0.2.1-rc.1`，Node `>= 20`。
 

@@ -2329,6 +2329,9 @@
     if (ids.length < 2) return
     var items = batchItems(kind, ids)
     if (state.batchPollTimer) window.clearTimeout(state.batchPollTimer)
+    clearBatchEstimate()
+    state.batchSuccessSeen = 0
+    state.batchResetAt = 0
     state.dockerBatch = { kind, targets: ids, items }
     var label = kind === 'images' ? '镜像' : '容器'
     els.batchTitle.textContent = '删除选中的 ' + ids.length + ' 个' + label
@@ -2345,7 +2348,6 @@
     els.batchError.hidden = true
     els.batchError.textContent = ''
     els.batchProgress.hidden = true
-    els.batchProgress.classList.remove('active')
     els.batchProgressBar.style.width = '0'
     els.batchConfirm.disabled = false
     els.batchConfirm.textContent = '确认删除'
@@ -2353,12 +2355,12 @@
   }
 
   function closeDockerBatch() {
+    clearBatchEstimate()
     if (state.batchPollTimer) window.clearTimeout(state.batchPollTimer)
     state.batchPollTimer = 0
     state.dockerBatch = null
     els.batchModal.hidden = true
     els.batchProgress.hidden = true
-    els.batchProgress.classList.remove('active')
   }
 
   function applyBatchResults(batch, results) {
@@ -2384,6 +2386,28 @@
     loadDrawerDetails(true)
   }
 
+  function clearBatchEstimate() {
+    if (state.batchEstimateTimer) window.clearInterval(state.batchEstimateTimer)
+    state.batchEstimateTimer = 0
+  }
+
+  function startBatchEstimate(item, index, total) {
+    clearBatchEstimate()
+    state.batchItemId = item ? item.id : ''
+    state.batchItemStart = Date.now()
+    var title = item ? item.title : '目标'
+    var label = (index + 1) + '/' + total
+    function tick() {
+      if (!state.batchItemId) return
+      var elapsed = Date.now() - state.batchItemStart
+      var percent = Math.min(95, Math.max(1, Math.round(elapsed / 25000 * 95)))
+      els.batchProgressBar.style.width = percent + '%'
+      els.batchProgressText.textContent = label + ' · ' + percent + '% · 正在删除 ' + title
+    }
+    tick()
+    state.batchEstimateTimer = window.setInterval(tick, 250)
+  }
+
   function pollDockerBatch(jobId, batch) {
     fetch('api/hosts/' + encodeURIComponent(state.drawerHostId) + '/docker/batch/' + encodeURIComponent(jobId), {
       cache: 'no-store',
@@ -2399,20 +2423,35 @@
       var total = Math.max(1, Number(job.total) || batch.targets.length)
       var successes = Math.max(0, Math.min(total, Number(job.successes) || 0))
       els.batchProgress.hidden = false
-      els.batchProgress.classList.toggle('active', !done)
-      els.batchProgressBar.style.width = Math.round(successes / total * 100) + '%'
-      els.batchProgressText.textContent = successes + '/' + total + (done ? ' 完成' : ' 已删除')
-      if (job.status === 'done') {
+      if (successes > state.batchSuccessSeen) {
+        state.batchSuccessSeen = successes
+        clearBatchEstimate()
+        state.batchItemId = ''
+        els.batchProgressBar.style.width = '100%'
+        els.batchProgressText.textContent = successes + '/' + total + ' · 100% 删除成功'
+        state.batchResetAt = Date.now() + 650
+      }
+      if (done) {
+        clearBatchEstimate()
+        if (successes === total) {
+          els.batchProgressBar.style.width = '100%'
+          els.batchProgressText.textContent = successes + '/' + total + ' · 100% 完成'
+        } else {
+          els.batchProgressBar.style.width = '0'
+          els.batchProgressText.textContent = successes + '/' + total + ' · 完成（有失败）'
+        }
         els.batchConfirm.disabled = false
-        applyBatchResults(batch, job.results || [])
+        window.setTimeout(function () { applyBatchResults(batch, job.results || []) }, 500)
         return
       }
-      if (job.status === 'error') {
-        throw new Error(job.error || '批量删除失败')
+      if (job.status === 'error') throw new Error(job.error || '批量删除失败')
+      var currentItem = job.current && batch.items ? batch.items.find(function (item) { return item.id === job.current }) : null
+      if (currentItem && Date.now() >= state.batchResetAt && state.batchItemId !== currentItem.id) {
+        startBatchEstimate(currentItem, successes, total)
       }
       state.batchPollTimer = window.setTimeout(function () { pollDockerBatch(jobId, batch) }, 500)
     }).catch(function (error) {
-      els.batchProgress.classList.remove('active')
+      clearBatchEstimate()
       els.batchConfirm.disabled = false
       els.batchConfirm.textContent = '重试删除'
       els.batchError.hidden = false
@@ -2427,9 +2466,12 @@
     els.batchConfirm.textContent = '删除中…'
     els.batchError.hidden = true
     els.batchProgress.hidden = false
-    els.batchProgress.classList.add('active')
+    clearBatchEstimate()
+    state.batchSuccessSeen = 0
+    state.batchResetAt = 0
+    state.batchItemId = ''
     els.batchProgressBar.style.width = '0'
-    els.batchProgressText.textContent = '0/' + batch.targets.length + ' 已删除'
+    els.batchProgressText.textContent = '0/' + batch.targets.length + ' · 0%'
     fetch('api/hosts/' + encodeURIComponent(state.drawerHostId) + '/docker/batch', {
       method: 'POST',
       headers: { 'content-type': 'application/json', 'x-monitor-token': writeToken },
