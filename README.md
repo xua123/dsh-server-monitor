@@ -2,7 +2,7 @@
 
 [English](README.md) | [简体中文](README.zh-CN.md)
 
-A server resource monitor for [DeepSeek Harness](https://github.com/deepseek-ai/deepseek-harness). It shows local and SSH server usage in the DSH sidebar and in a per-session tab.
+A server resource monitor for [DeepSeek Harness](https://github.com/deepseek-ai/deepseek-harness). It shows local and SSH server usage in the DSH sidebar and in a per-session tab, and includes process, Docker, image and server-management actions.
 
 ![Resource monitor dashboard](docs/preview.png)
 
@@ -12,7 +12,8 @@ A server resource monitor for [DeepSeek Harness](https://github.com/deepseek-ai/
 - **Accelerators** — per-card utilization, memory, temperature and power for NVIDIA GPU, Huawei Ascend NPU and Hygon DCU.
 - **Processes** — sortable process table, process search, and confirmed `SIGTERM` termination with a `SIGKILL` fallback.
 - **Deleted servers** — expand the list below the dashboard to restore a server or permanently remove its Host block from the SSH config.
-- **Docker** — image and container lists, start/stop/restart/delete, multi-select deletion, startup parameters, and an image-to-container dependency tree.
+- **Docker** — image and container lists, start/stop/restart/delete, multi-select batch deletion with progress, startup parameters, and an image-to-container dependency tree.
+- **Server management** — hide or restore servers, permanently remove a Host block from the SSH config, and sync newly added servers into `~/.ssh/config`.
 - **Two scopes** — a global server panel and a session-scoped server tab that follows the current workspace.
 - **Read-only collection** — resource samples use read-only commands; credentials stay on the local machine.
 
@@ -60,6 +61,13 @@ It supports search, tag filters, card/list views, and sorting by remaining accel
 ### Session tab
 
 Open the **Resource Monitor** tab in a conversation. The tab reads the session workspace and shows the matching server only. If no server can be matched, choose one from the selector in the tab header.
+
+## Operations
+
+- **Processes** — abort with `SIGTERM`; if the process survives, offer a confirmed `SIGKILL` force-kill action.
+- **Containers** — start, stop, restart and delete; select multiple containers, then press the card's Delete button to open a batch confirmation with progress such as `1/3`, `2/3`, `3/3`.
+- **Images** — delete an image; when deletion is blocked, list the containers still using it; inspect the image-to-container dependency tree.
+- **Servers** — hide a server from the dashboard or restore it; permanently delete its Host block from the SSH config after a second confirmation. Newly added servers are appended to the SSH config with a backup.
 
 ## Resource coverage
 
